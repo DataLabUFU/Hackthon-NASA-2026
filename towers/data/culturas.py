@@ -142,6 +142,9 @@ def carregar_culturas(usar_gbif: bool = True, cache_gbif: Path | str = CACHE_GBI
 
     df = pl.concat([curadas, resto], how="diagonal_relaxed").with_columns(
         exibivel=pl.col("nome_pt").is_not_null() & pl.col("colheita").is_in(COLHEITAS_VALIDAS),
+        # desempate no ranking: 0 = cultivada em larga escala (ou curada), 1 = pequena escala, 2 = demais
+        escala_cultivo=pl.when(pl.col("obrigatoria") | pl.col("PLAT").fill_null("").str.contains("large scale")).then(0)
+        .when(pl.col("PLAT").fill_null("").str.contains("small scale")).then(1).otherwise(2).cast(pl.Int8),
     )
 
     # Identificador estável da cultura: slug do nome; se repetido, acrescenta a espécie.

@@ -13,7 +13,9 @@ filtrada e com as colunas derivadas que as torres usam:
 - ``modo``: ``safra`` (anuais/bianuais: janela plantio → fim do ciclo) ou
   ``implantacao`` (perenes: avaliadas no ano inteiro);
 - faixa de ciclo (``ciclo_min``/``ciclo_max``) para o modo safra;
-- ``KTMP`` sempre preenchido, com ``ktmp_origem`` (``ecocrop``/``imputado``);
+- ``KTMP`` (temperatura letal na fase inicial) sempre preenchido, com ``ktmp_origem``
+  (``ecocrop``/``imputado``); ``KTMPR`` (letal na planta estabelecida/dormente) como na base,
+  sem imputação (quem usa cai no ``KTMP`` quando falta, o que é conservador);
 - fotoperíodo: classes aceitas e se a espécie é sensível;
 - ``colheita``: ``reprodutiva``, ``vegetativa`` ou ``indefinida`` (+ ``colheita_origem``);
 - flags de qualidade do dado (``*_conhecido``/``*_conhecida``).
@@ -108,8 +110,10 @@ COLUNAS_SAIDA = [
     "id_ecoport", "especie", "binomio", "variante", "sinonimos", "familia", "nomes_comuns",
     "LISPA", "LIFO", "CAT", "PLAT",
     "uso", "modo", "modo_inferido", "colheita", "colheita_origem",
-    "TMIN", "TOPMN", "TOPMX", "TMAX", "KTMP", "ktmp_origem", "RMIN", "ROPMN", "ROPMX", "RMAX",
+    "TMIN", "TOPMN", "TOPMX", "TMAX", "KTMP", "ktmp_origem", "KTMPR", "RMIN", "ROPMN", "ROPMX", "RMAX",
     "fonte_parametros", "ciclo_min", "ciclo_max",
+    # requisitos de solo (Torre 3): ótimo / absoluto
+    "PHMIN", "PHOPMN", "PHOPMX", "PHMAX", "TEXT", "TEXTR", "DRA", "DRAR", "DEP", "DEPR", "FER", "FERR", "SAL", "SALR",
     "foto_curto", "foto_neutro", "foto_longo", "foto_sensivel",
     "categoria_conhecida", "ciclo_conhecido", "chuva_conhecida", "foto_conhecido",
 ]
@@ -354,12 +358,14 @@ def carregar_ecocrop(caminho: Path | str | None = None, baixar: bool = True,
     return df
 
 
-def expandir_ciclos(eco: pl.DataFrame, grade: tuple[int, ...] = GRADE_CICLO) -> pl.DataFrame:
+def expandir_ciclos(eco: pl.DataFrame, grade: tuple[int, ...] = GRADE_CICLO, chave: str = "id_ecoport") -> pl.DataFrame:
     """Uma linha por (espécie em modo safra, duração da grade dentro de [ciclo_min, ciclo_max]).
 
     - Se nenhuma duração da grade cair na faixa, usa a mais próxima do ponto médio.
     - ``ciclo_tipico`` marca a duração mais próxima do ponto médio da faixa (referência realista,
       usada no ``score_t1_tipico``).
+    - ``chave``: coluna que identifica cada linha de ``eco`` (``id_cultura`` no catálogo de culturas,
+      onde a mesma espécie pode virar mais de uma cultura).
     """
     safra = eco.filter(pl.col("modo") == "safra")
     meio = (pl.col("ciclo_min") + pl.col("ciclo_max")) / 2
@@ -372,18 +378,18 @@ def expandir_ciclos(eco: pl.DataFrame, grade: tuple[int, ...] = GRADE_CICLO) -> 
             _dist=dist,
         )
         .with_columns(
-            _rank_dist=pl.col("_dist").rank("ordinal").over("id_ecoport"),
-            _algum_dentro=pl.col("dentro").any().over("id_ecoport"),
+            _rank_dist=pl.col("_dist").rank("ordinal").over(chave),
+            _algum_dentro=pl.col("dentro").any().over(chave),
         )
         .filter(pl.col("dentro") | (~pl.col("_algum_dentro") & (pl.col("_rank_dist") == 1)))
         .with_columns(
-            ciclo_tipico=pl.col("_dist") == pl.col("_dist").min().over("id_ecoport"),
+            ciclo_tipico=pl.col("_dist") == pl.col("_dist").min().over(chave),
         )
         # Empate no ponto médio (ex.: faixa 60–120 → 75 e 105 equidistantes de 90): fica o menor.
         .with_columns(
             ciclo_tipico=pl.col("ciclo_tipico")
-            & (pl.col("ciclo_dias") == pl.col("ciclo_dias").filter(pl.col("ciclo_tipico")).min().over("id_ecoport"))
+            & (pl.col("ciclo_dias") == pl.col("ciclo_dias").filter(pl.col("ciclo_tipico")).min().over(chave))
         )
         .drop("dentro", "_dist", "_rank_dist", "_algum_dentro")
-        .sort("especie", "ciclo_dias")
+        .sort(chave, "ciclo_dias")
     )
