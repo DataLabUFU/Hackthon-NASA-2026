@@ -1,0 +1,3 @@
+especie,base_ecocrop,TMIN,TOPMN,TOPMX,TMAX,KTMP,RMIN,ROPMN,ROPMX,RMAX,GMIN,GMAX,fonte_parametros
+Avena strigosa,Avena sativa,,,,,,,,,,,,"Aproximação: todos os parâmetros copiados de Avena sativa (ECOCROP). Não há entrada de A. strigosa no ECOCROP e não foi encontrada fonte técnica com as faixas completas; a aveia-preta tolera mais seca e solo pobre, então a aptidão tende a ser subestimada."
+x Triticosecale,Triticum aestivum,,15,25,,,,,,,,,"TOPMN/TOPMX: Portaria SPA/MAPA nº 637/2021 (ZARC do triticale, faixa ideal de 15 a 25 °C). Demais parâmetros: aproximação por Triticum aestivum (ECOCROP)."
