@@ -135,3 +135,10 @@ def test_conflito_de_nome():
     assert nomes["Acacia a"] == "Acácia-auriculada"        # usa a alternativa livre
     assert nomes["Acacia c"] is None                       # sem alternativa: sai
     assert out.filter("conflito_nome")["especie"].to_list() == ["Musa acuminata", "Acacia c"]
+
+
+def test_cultura_curada_mantem_id_limpo_mesmo_com_variantes(cat):
+    arroz = cat.filter(pl.col("nome_pt") == "Arroz")
+    assert arroz.height >= 2                                            # curada + subespécies herdadas
+    assert arroz.filter("obrigatoria")["id_cultura"].to_list() == ["arroz"]
+    assert all(i.startswith("arroz--") for i in arroz.filter(~pl.col("obrigatoria"))["id_cultura"].to_list())

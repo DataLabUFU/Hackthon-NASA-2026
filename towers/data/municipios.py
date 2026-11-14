@@ -21,6 +21,17 @@ UF_POR_CODIGO = {
 }
 
 
+def municipio_mais_proximo(lat: float, lon: float, municipios: pl.DataFrame | None = None) -> dict:
+    """Município cuja sede está mais próxima da coordenada (distância aproximada em km)."""
+    mun = municipios if municipios is not None else carregar_municipios()
+    import math
+    k = math.cos(math.radians(lat))
+    r = mun.with_columns(
+        dist_km=(((pl.col("lat") - lat) ** 2 + ((pl.col("lon") - lon) * k) ** 2).sqrt() * 111.2)
+    ).sort("dist_km").row(0, named=True)
+    return r
+
+
 def carregar_municipios(caminho: Path | str = CAMINHO_PADRAO, baixar: bool = True) -> pl.DataFrame:
     """Colunas: geocodigo (texto, 7 dígitos), nome, uf, lat, lon."""
     caminho = Path(caminho)

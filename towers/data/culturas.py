@@ -147,10 +147,17 @@ def carregar_culturas(usar_gbif: bool = True, cache_gbif: Path | str = CACHE_GBI
         .when(pl.col("PLAT").fill_null("").str.contains("small scale")).then(1).otherwise(2).cast(pl.Int8),
     )
 
-    # Identificador estável da cultura: slug do nome; se repetido, acrescenta a espécie.
+    # Identificador estável da cultura: slug do nome. Se o nome se repete (variantes herdadas), a linha
+    # curada fica com o id limpo (é ele que o ZARC, a rotação e as correções de solo usam) e só as demais
+    # recebem a espécie como sufixo.
     base = [slug(n) if n else slug(e) for n, e in zip(df["nome_pt"].to_list(), df["especie"].to_list())]
+    curada = df["obrigatoria"].to_list()
     repetidos = {b for b in base if base.count(b) > 1}
-    ids = [f"{b}--{slug(e)}" if b in repetidos else b for b, e in zip(base, df["especie"].to_list())]
+    limpo_usado = {b for b, c in zip(base, curada) if b in repetidos and c}
+    ids = [
+        b if (b not in repetidos or (c and b in limpo_usado)) else f"{b}--{slug(e)}"
+        for b, c, e in zip(base, curada, df["especie"].to_list())
+    ]
     df = df.with_columns(id_cultura=pl.Series(ids)).select("id_cultura", pl.exclude("id_cultura"))
 
     log.info(
