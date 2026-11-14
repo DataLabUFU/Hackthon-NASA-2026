@@ -1,19 +1,12 @@
 """Sensibilidade dos limiares da Torre 7 nos 20 pontos.
 
-Objetivo: ajudar a escolher os limiares. Um bom limiar deixa a probabilidade longe de 0 e de 1;
-se quase todo ano tem evento (p ≈ 1) ou nenhum tem (p ≈ 0), a probabilidade não diferencia
-nada. Para cada limiar de uma grade, calcula por ponto a probabilidade de pelo menos um
-evento na safra de outubro a março, com intervalo de 95% (bootstrap de anos).
+Para cada limiar de uma grade, calcula por ponto P(pelo menos um evento na safra out–mar)
+com IC de 95%. Um bom limiar deixa p longe de 0 e de 1. Para a queda de temperatura, também
+descreve os eventos (sazonalidade, agrupamento, dias secos e chuvosos).
 
-Também calcula, para a queda de temperatura, algumas características dos eventos: se variam
-com o mês, se vêm em sequência e quantos caem em dias secos ou chuvosos.
+Uso, a partir da raiz: ``python -m scripts.t7_sensibilidade``
 
-Uso (a partir da raiz do repositório):
-
-    python -m scripts.t7_sensibilidade
-
-Saída: tabelas CSV em ``artifacts/t7/sensibilidade/`` (pasta ignorada pelo git) e um resumo
-no terminal. Só usa anos de referência (até 2021).
+Saída em ``artifacts/t7/sensibilidade/`` (ignorada pelo git). Só usa anos até 2021.
 """
 from __future__ import annotations
 
@@ -52,7 +45,7 @@ def sensibilidade_safra(ref, medida, grade, cfg, inclusivo) -> pd.DataFrame:
 
 
 def resumo_grade(tab: pd.DataFrame) -> pd.DataFrame:
-    """Resumo entre os 20 pontos: mediana, mínimo e máximo de p, e quantos ficam em [0,1; 0,9]."""
+    """Resumo entre pontos: mediana, mínimo e máximo de p e quantos ficam entre 0,1 e 0,9."""
     g = tab.groupby("limiar")
     return pd.DataFrame({
         "p_mediana": g["p_clim"].median(),
@@ -65,14 +58,13 @@ def resumo_grade(tab: pd.DataFrame) -> pd.DataFrame:
 
 
 def caracteristicas_queda(ref, queda, limiares) -> pd.DataFrame:
-    """Para cada ponto e limiar, em dias de outubro a março:
+    """Por ponto e limiar, nos dias de out–mar:
 
-    - ``r2_mes``: fração da variação da queda diária explicada pelo mês (0 = sem sazonalidade);
-    - ``autocorr_eventos``: correlação entre "evento hoje" e "evento ontem" (0 = não se agrupam);
-    - ``frac_dia_seco`` e ``frac_dia_chuvoso``: fração dos eventos em dias com chuva < 1 mm
-      e com chuva >= 10 mm;
-    - ``limiar_5pct_dias`` e ``p_safra_limiar_5pct``: queda superada em 5% dos dias e a
-      probabilidade por safra se ele fosse o limiar.
+    - ``r2_mes``: quanto o mês explica da queda diária (0 = sem sazonalidade);
+    - ``autocorr_eventos``: correlação entre evento hoje e ontem (0 = não se agrupam);
+    - ``frac_dia_seco`` / ``frac_dia_chuvoso``: eventos em dias com < 1 mm / >= 10 mm;
+    - ``limiar_5pct_dias`` / ``p_safra_limiar_5pct``: queda superada em 5% dos dias e a
+      probabilidade por safra com esse limiar.
     """
     mes = ref["data"].dt.month
     na_safra = mes.isin([10, 11, 12, 1, 2, 3])

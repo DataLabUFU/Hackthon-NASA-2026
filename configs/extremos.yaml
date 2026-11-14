@@ -1,48 +1,52 @@
-# Torre 7: probabilidade de extremos climáticos.
-# O formato e as regras de validação estão em towers/t7_extremos/config.py.
-#
-# Cada limiar tem um status:
-#   PROVISORIO = valor de trabalho, ainda não confirmado pela equipe de agronomia
-#   DEFINIDO   = valor fechado, com fonte
-# valor: null quer dizer "ainda não escolhido": o cálculo para com uma mensagem, em vez de
-# usar um número qualquer.
+# Torre 7: probabilidade de extremos climáticos (schema em towers/t7_extremos/config.py).
+# status: PROVISORIO (valor de trabalho) | DEFINIDO (fechado, com fonte)
+# valor: null = ainda não escolhido (o cálculo para em vez de inventar um número)
 
 referencia:
   arquivo: data/raw/power/dados_unificados.csv
   ano_inicio: 2000
-  ano_fim: 2021            # 2022 em diante fica para o time de ML testar as previsões
+  ano_fim: 2021            # 2022 em diante é do ML
   fonte_dados: "NASA POWER diário (reanálise MERRA-2, grade 0,5° x 0,625°): PRECTOTCORR, T2M, T2M_MAX, T2M_MIN, RH2M, WS2M; pontos P01–P20 (coordenadas a obter)"
-  data_download: null      # data em que os dados foram baixados da NASA POWER (a obter)
+  data_download: null      # a obter
 
-bootstrap:                 # intervalo de confiança: sorteio de anos inteiros, com reposição
+bootstrap:                 # IC por sorteio de anos inteiros, com reposição
   repeticoes: 1000
-  semente: 42              # fixa o sorteio, para os resultados serem sempre os mesmos
+  semente: 42
   nivel_ic: 0.95
 
 limiares:
-  chuva_extrema:           # chuva acumulada em poucos dias acima de um valor
-    valor: null            # a definir: mm em 3 dias
+  chuva_extrema:
+    valor: 80.0            # evento = chuva em 3 dias > 80 mm
     unidade: mm
     janela_dias: 3
-    fonte: "a definir (valor agronômico ou percentil da referência 2000–2021)"
-    vigencia: null
+    fonte: "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 80 mm deixa P(>=1 evento) entre 0,33 e 0,71 em todos; não é critério de dano agronômico"
+    vigencia: "2026-11-14"
     status: PROVISORIO
-    grade_sensibilidade: []   # valores testados na análise de sensibilidade
+    grade_sensibilidade: []   # vazio = grade padrão do script de sensibilidade
 
-  queda_temperatura:       # queda da temperatura média em poucos dias
-    valor: null            # a definir: análise preliminar sugere entre 4 e 5 °C
+  queda_temperatura:
+    valor: 5.0             # evento = queda de T2M em 2 dias >= 5 °C
     unidade: °C
     janela_dias: 2
-    absoluto: false        # false = só esfriamento; true = também aquecimento brusco
-    fonte: "análise preliminar em um único ponto (lat −18,92; lon −48,27; safras out–mar de 2000–2021); valor final é agronômico"
-    vigencia: null
+    absoluto: false        # false = só esfriamento
+    fonte: "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 5 °C deixa P(>=1 evento) entre 0,19 e 0,67 em todos; não é critério de dano agronômico"
+    vigencia: "2026-11-14"
     status: PROVISORIO
     grade_sensibilidade: [3.0, 4.0, 5.0, 6.0]
 
-  estiagem:                # indicador informativo de tempo seco (amplitude térmica)
-    n_dias: 10             # média dos últimos 10 dias (valor de partida)
+  estiagem:                # informativo
+    n_dias: 10
     n_dias_status: PROVISORIO
-    limiar_amplitude_alta: null   # a definir: anomalia (°C) a partir da qual o dia tem "amplitude alta"
+    limiar_amplitude_alta: null   # a definir (anomalia em °C)
     limiar_amplitude_alta_status: PROVISORIO
-    janela_climatologia_dias: 31  # o "normal" de cada dia é a média de 31 dias em volta dele
+    janela_climatologia_dias: 31
     fonte: "análise preliminar em um único ponto (2000–2021)"
+
+enso:                      # condicionante; sem tabela de fases = "nao_calculado"
+  indice: null             # a definir: RONI ou ONI (NOAA)
+  tabela: null             # a obter: CSV com colunas ano (início da safra) e fase (El Niño | La Niña | Neutro)
+  fase_atual: null
+  k: 10.0                  # p_final = (n·p_enso + k·p_clim) / (n + k)
+  k_status: PROVISORIO
+  repeticoes_permutacao: 10000
+  fonte: "k = 10: valor inicial sugerido, a confirmar"

@@ -11,7 +11,7 @@ import pandas as pd
 import pytest
 from omegaconf import OmegaConf
 
-from towers.t7_extremos import config, dados, eventos, probabilidade
+from towers.t7_extremos import config, dados, enso, eventos, probabilidade, referencia, tendencia
 
 CSV = dados.CAMINHO_PADRAO
 
@@ -211,8 +211,10 @@ def test_config_padrao_carrega():
     cfg = config.carregar_config()
     assert cfg.referencia.ano_fim == 2021
     assert cfg.limiares.chuva_extrema.status == "PROVISORIO"
+    assert config.limiar_obrigatorio(cfg.limiares.chuva_extrema, "chuva_extrema") == 80.0
+    pendente = config.carregar_config(overrides=["limiares.chuva_extrema.valor=null"])
     with pytest.raises(ValueError, match="pendente"):
-        config.limiar_obrigatorio(cfg.limiares.chuva_extrema, "chuva_extrema")
+        config.limiar_obrigatorio(pendente.limiares.chuva_extrema, "chuva_extrema")
 
 
 def test_config_recusa_2022_e_status_invalido():
@@ -221,7 +223,7 @@ def test_config_recusa_2022_e_status_invalido():
     with pytest.raises(ValueError):
         config.carregar_config(overrides=["limiares.chuva_extrema.status=OK"])
     with pytest.raises(ValueError, match="DEFINIDO"):
-        config.carregar_config(overrides=["limiares.queda_temperatura.status=DEFINIDO"])
+        config.carregar_config(overrides=["limiares.queda_temperatura.status=DEFINIDO", "limiares.queda_temperatura.valor=null"])
 
 
 def test_config_recusa_chave_desconhecida(tmp_path: Path):
@@ -229,3 +231,127 @@ def test_config_recusa_chave_desconhecida(tmp_path: Path):
     arq.write_text(OmegaConf.to_yaml({"referencia": {"ano_final": 2021}}), encoding="utf-8")
     with pytest.raises(Exception):
         config.carregar_config(arq)
+
+
+# ----------------------------------------------------------------------------- referência
+@pytest.fixture(scope="module")
+def tabelas(ref):
+    cfg = config.carregar_config(overrides=["bootstrap.repeticoes=200"])
+    diarios = referencia.indicadores_diarios(ref, cfg)
+    ind = referencia.tabela_indicadores(ref, diarios)
+    return cfg, diarios, ind, referencia.tabela_decendio(ind, cfg), referencia.tabela_safra(ref, diarios, cfg)
+
+
+def test_indicadores_usam_limiares_da_config(ref, tabelas):
+    cfg, diarios, ind, _, _ = tabelas
+    c3 = eventos.chuva_acumulada(ref, 3)
+    assert (diarios["chuva_extrema"][c3 > 80] == 1).all() and (diarios["chuva_extrema"][c3 <= 80] == 0).all()
+    q = eventos.queda_temperatura(ref, 2)
+    assert (diarios["queda_brusca"][q >= 5] == 1).all() and (diarios["queda_brusca"][q < 5] == 0).all()
+    assert len(ind) == 20 * 22 * 36 and ind["YEAR"].max() == 2021
+
+
+def test_algum_por_decendio_e_safra(tabelas):
+    _, _, ind, dec, saf = tabelas
+    ok = ind[["chuva_extrema", "queda_brusca"]].notna().all(axis=1)
+    assert (ind.loc[ok, "algum"] == ind.loc[ok, ["chuva_extrema", "queda_brusca"]].max(axis=1)).all()
+    for tab in (dec, saf):
+        chave = ["PONTO", "decendio"] if "decendio" in tab else ["PONTO"]
+        w = tab.pivot_table(index=chave, columns="evento", values="p_clim")
+        assert (w["algum"] >= w[["chuva_extrema", "queda_brusca"]].max(axis=1) - 1e-12).all()
+        assert (w["algum"] <= w["chuva_extrema"] + w["queda_brusca"] + 1e-12).all()
+    assert len(dec) == 3 * 20 * 36 and len(saf) == 3 * 20
+    assert saf["n_anos"].eq(21).all()
+
+
+def test_safra_bate_com_sensibilidade_p06(tabelas):
+    """P06 com queda >= 5 °C: 5 de 21 safras (mesmo valor da análise de sensibilidade)."""
+    saf = tabelas[4]
+    p = saf.query("PONTO == 'P06' and evento == 'queda_brusca'")["p_clim"].item()
+    assert p == pytest.approx(5 / 21)
+
+
+# ------------------------------------------------------------------------------ tendência
+@pytest.fixture(scope="module")
+def anuais(ref):
+    return tendencia.series_anuais(ref)
+
+
+def test_series_anuais_conferidas(ref, anuais):
+    assert len(anuais) == 20 * 22
+    p06 = ref[(ref["PONTO"] == "P06") & (ref["YEAR"] == 2015)]
+    linha = anuais.query("PONTO == 'P06' and ano == 2015").iloc[0]
+    assert linha["chuva_total"] == pytest.approx(p06["PRECTOTCORR"].sum())
+    assert linha["tmax_max"] == pytest.approx(p06["T2M_MAX"].max())
+    # veranico conferido com itertools.groupby (contagem independente)
+    from itertools import groupby
+    jm = p06[p06["data"].dt.month <= 3]["PRECTOTCORR"] < 1.0
+    esperado = max((len(list(g)) for seco, g in groupby(jm) if seco), default=0)
+    assert linha["veranico_jan_mar"] == esperado
+
+
+def test_tendencia_sen_e_kendall(anuais):
+    from scipy import stats
+    s = anuais.query("PONTO == 'P06'")
+    r = tendencia.tendencia(s["ano"], s["chuva_total"])
+    x, y = s["ano"].to_numpy(float), s["chuva_total"].to_numpy()
+    inclin = [(y[j] - y[i]) / (x[j] - x[i]) for i in range(len(x)) for j in range(i + 1, len(x))]
+    assert r["sen_por_ano"] == pytest.approx(np.median(inclin))
+    assert r["p"] == pytest.approx(stats.kendalltau(x, y)[1])
+    assert r["n_anos"] == 22
+
+
+def test_holm_por_ponto(anuais):
+    t = tendencia.tendencias_por_ponto(anuais).query("PONTO == 'P06'")
+    p = np.sort(t["p"].to_numpy())
+    m = len(p)
+    holm = np.maximum.accumulate(np.minimum(1, (m - np.arange(m)) * p))
+    assert np.allclose(np.sort(t["p_holm"].to_numpy()), holm)
+
+
+# ----------------------------------------------------------------------------------- ENSO
+@pytest.fixture(scope="module")
+def ind_e_grupos(ref):
+    """Indicador real (queda >= 5 °C por safra, P06) e uma partição REAL dos anos que não é
+    ENSO: safras com chuva acima ou abaixo da mediana. Só serve para testar a lógica."""
+    q = eventos.indicador_evento(eventos.queda_temperatura(ref), 5.0)
+    s = probabilidade.indicador_por_safra(ref, q).query("PONTO == 'P06'").set_index("ano_safra")["evento"].dropna()
+    sub = ref[ref["PONTO"] == "P06"]
+    md = sub["data"].dt.month
+    ano_s = sub["data"].dt.year - (md <= 3).astype(int)
+    tot = sub[md.isin([10, 11, 12, 1, 2, 3])].groupby(ano_s)["PRECTOTCORR"].sum().reindex(s.index)
+    grupos = pd.Series(np.where(tot > tot.median(), "chuvosa", "seca"), index=s.index)
+    return s, grupos
+
+
+def test_enso_sem_tabela(ind_e_grupos):
+    s, _ = ind_e_grupos
+    assert enso.probabilidade_enso(s, None, None) == {"enso": "nao_calculado"}
+
+
+def test_enso_logica_com_particao_real(ind_e_grupos):
+    from scipy import stats
+    s, g = ind_e_grupos
+    r = enso.probabilidade_enso(s, g, "seca", k=10, repeticoes=300, repeticoes_permutacao=2000,
+                                fases_validas=("seca", "chuvosa"))
+    na = (g == "seca").to_numpy()
+    ev = s.to_numpy()
+    assert r["n_anos"] == 21 and r["n_anos_fase"] == na.sum()
+    assert r["p_clim"] == pytest.approx(ev.mean())
+    assert r["p_enso"] == pytest.approx(ev[na].mean())
+    esperado = (na.sum() * ev[na].mean() + 10 * ev.mean()) / (na.sum() + 10)
+    assert r["p_final"] == pytest.approx(esperado)
+    assert min(r["p_enso"], r["p_clim"]) - 1e-12 <= r["p_final"] <= max(r["p_enso"], r["p_clim"]) + 1e-12
+    t = [[ev[na].sum(), na.sum() - ev[na].sum()], [ev[~na].sum(), (~na).sum() - ev[~na].sum()]]
+    assert r["p_fisher"] == pytest.approx(stats.fisher_exact(np.array(t, dtype=int))[1])
+    assert 0 < r["p_permutacao"] <= 1
+
+
+def test_enso_p_final_sem_anos_da_fase():
+    assert enso.p_final(np.nan, 0, 0.3, 10) == 0.3
+
+
+def test_enso_valida_fases(ind_e_grupos):
+    s, g = ind_e_grupos
+    with pytest.raises(ValueError):
+        enso.probabilidade_enso(s, g, "seca")  # nomes fora de El Niño / La Niña / Neutro

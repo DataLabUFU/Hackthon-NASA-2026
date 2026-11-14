@@ -1,16 +1,8 @@
-"""Configuração da Torre 7: limiares e parâmetros lidos de ``configs/extremos.yaml``.
+"""Limiares e parâmetros da Torre 7, lidos de ``configs/extremos.yaml``.
 
-As classes abaixo descrevem quais campos o YAML pode ter, com seus tipos e valores padrão
-(é o "schema"). O OmegaConf junta o schema com o YAML e acusa erro se aparecer um campo
-desconhecido ou de tipo errado, o que pega erros de digitação cedo.
-
-Cada limiar registra valor, unidade, fonte, data de vigência e status:
-
-- ``PROVISORIO``: valor de trabalho, ainda não confirmado pela equipe de agronomia;
-- ``DEFINIDO``: valor fechado, com fonte.
-
-Valor ``null`` significa "ainda não escolhido": as funções que precisam do limiar param com
-uma mensagem clara, em vez de usar um número qualquer.
+As classes abaixo são o schema: o OmegaConf rejeita campos desconhecidos ou de tipo errado.
+Status de cada limiar: ``PROVISORIO`` (valor de trabalho) ou ``DEFINIDO`` (fechado, com
+fonte). Valor ``null`` = ainda não escolhido; o cálculo para em vez de inventar um número.
 """
 from __future__ import annotations
 
@@ -80,6 +72,19 @@ class Estiagem:
 
 
 @dataclass
+class Enso:
+    indice: Optional[str] = None
+    """Índice usado para classificar as fases (ex.: RONI ou ONI, da NOAA)."""
+    tabela: Optional[str] = None
+    """CSV com colunas ``ano`` e ``fase``; null = ENSO não calculado."""
+    fase_atual: Optional[str] = None
+    k: float = 10.0
+    k_status: str = "PROVISORIO"
+    repeticoes_permutacao: int = 10_000
+    fonte: str = ""
+
+
+@dataclass
 class Limiares:
     chuva_extrema: ChuvaExtrema = field(default_factory=ChuvaExtrema)
     queda_temperatura: QuedaTemperatura = field(default_factory=QuedaTemperatura)
@@ -91,6 +96,7 @@ class ConfigExtremos:
     referencia: Referencia = field(default_factory=Referencia)
     bootstrap: Bootstrap = field(default_factory=Bootstrap)
     limiares: Limiares = field(default_factory=Limiares)
+    enso: Enso = field(default_factory=Enso)
 
 
 def carregar_config(caminho: str | Path | None = None, overrides: list[str] | None = None) -> DictConfig:
@@ -123,6 +129,7 @@ def validar(cfg: DictConfig) -> None:
         ("queda_temperatura.status", lim.queda_temperatura.status),
         ("estiagem.n_dias_status", lim.estiagem.n_dias_status),
         ("estiagem.limiar_amplitude_alta_status", lim.estiagem.limiar_amplitude_alta_status),
+        ("enso.k_status", cfg.enso.k_status),
     ]:
         if status not in STATUS:
             raise ValueError(f"limiares.{nome}={status!r}: use {STATUS}")

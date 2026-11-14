@@ -1,19 +1,10 @@
-"""Cálculo diário de cada evento.
+"""Cálculo diário dos eventos.
 
-Ideia geral: para cada ponto e cada dia, calculamos uma medida (por exemplo, a chuva dos
-últimos 3 dias) e comparamos com um limiar. O resultado é um indicador diário:
+Cada função devolve uma medida diária por ponto; ``indicador_evento`` a compara com um
+limiar e devolve 1.0 (houve), 0.0 (não houve) ou NaN (sem dado).
 
-- ``1.0``: o evento aconteceu naquele dia;
-- ``0.0``: não aconteceu;
-- ``NaN``: não dá para saber (falta histórico ou dado).
-
-Regras usadas em todas as funções:
-
-- As contas são feitas ponto a ponto; uma janela nunca mistura dois pontos.
-- Uma janela de vários dias termina no próprio dia ``t`` e só olha para trás
-  (``t−2``, ``t−1``, ``t``). Assim, o valor de um dia nunca usa informação do futuro.
-- Os primeiros dias da série, que não têm dias anteriores suficientes, ficam ``NaN``
-  em vez de zero, para não fingir que "não houve evento".
+Regras: as contas são feitas ponto a ponto; janelas de vários dias terminam no dia ``t`` e
+só olham para trás; dias sem histórico suficiente ficam NaN (não zero).
 """
 from __future__ import annotations
 
@@ -28,67 +19,45 @@ def _por_ponto(df: pd.DataFrame, coluna: str, func) -> pd.Series:
 
 # ----------------------------------------------------------------------------- chuva extrema
 def chuva_acumulada(df: pd.DataFrame, dias: int = 3) -> pd.Series:
-    """Chuva acumulada (mm) nos últimos ``dias`` dias, contando o próprio dia.
-
-    Com ``dias=3``, o valor de 10/01 é a soma da chuva de 08, 09 e 10/01. Somar alguns dias
-    captura tanto um temporal de um dia quanto chuvas fortes seguidas, que encharcam o solo.
-    """
+    """Chuva (mm) somada nos últimos ``dias`` dias, incluindo o dia (10/01 = 08 + 09 + 10/01)."""
     return _por_ponto(df, "PRECTOTCORR", lambda s: s.rolling(dias, min_periods=dias).sum())
 
 
 # ----------------------------------------------------------------- oscilação de temperatura
 def queda_temperatura(df: pd.DataFrame, dias: int = 2, absoluto: bool = False) -> pd.Series:
-    """Queda da temperatura média (°C) em ``dias`` dias: ``T2M(t−dias) − T2M(t)``.
+    """``T2M(t−dias) − T2M(t)`` em °C; positivo = esfriou.
 
-    Valor positivo = esfriou. Ex.: 24 °C em 08/01 e 19 °C em 10/01 dão queda de 5 °C em 10/01.
-    Com ``absoluto=True``, devolve o tamanho da variação sem sinal, para contar também
-    aquecimentos bruscos.
+    Com ``absoluto=True``, devolve a variação sem sinal (conta também aquecimento brusco).
     """
     q = _por_ponto(df, "T2M", lambda s: s.shift(dias) - s)
     return q.abs() if absoluto else q
 
 
 def indicador_evento(valores: pd.Series, limiar: float, inclusivo: bool = True) -> pd.Series:
-    """Transforma uma medida diária em "houve evento?" (1.0, 0.0 ou NaN).
-
-    Com ``inclusivo=True`` o evento é ``valor >= limiar``; com ``False``, ``valor > limiar``.
-    Dias sem medida continuam ``NaN``.
-    """
+    """1.0 se ``valor >= limiar`` (``>`` se ``inclusivo=False``), 0.0 se não, NaN se ausente."""
     acima = valores >= limiar if inclusivo else valores > limiar
     return acima.astype(float).where(valores.notna())
 
 
 # ------------------------------------------------------------------- indicador de estiagem
 def amplitude_termica(df: pd.DataFrame) -> pd.Series:
-    """Amplitude térmica do dia (°C): máxima menos mínima (``T2M_MAX − T2M_MIN``).
-
-    Em dias secos e de céu limpo o sol esquenta mais de dia e o calor escapa mais à noite,
-    então a amplitude cresce. Por isso ela serve como sinal de tempo seco.
-    """
+    """``T2M_MAX − T2M_MIN`` (°C). Cresce em dias secos e de céu limpo."""
     return df["T2M_MAX"] - df["T2M_MIN"]
 
 
 def dia_do_ano_365(datas) -> np.ndarray:
-    """Dia do ano num calendário fixo de 365 dias.
-
-    Em ano bissexto, 29/02 é tratado como 28/02 (dia 59) e os dias seguintes voltam uma
-    posição. Assim, 01/03 é sempre o dia 60, em qualquer ano.
-    """
+    """Dia do ano em calendário de 365 dias (29/02 vira 28/02; 01/03 é sempre o dia 60)."""
     d = pd.DatetimeIndex(datas)
     doy = d.day_of_year.to_numpy()
     return np.where(d.is_leap_year & (doy >= 60), doy - 1, doy)
 
 
 def climatologia_dtr(df_ref: pd.DataFrame, janela: int = 31) -> pd.DataFrame:
-    """Amplitude térmica "normal" de cada ponto em cada dia do ano.
+    """Amplitude térmica normal de cada ponto e dia do ano.
 
-    Para o dia 10 de janeiro, por exemplo, é a média da amplitude de todos os dias entre
-    26/12 e 25/01 (janela de 31 dias centrada no dia), em todos os anos de referência.
-    Usar uma janela, em vez de só o próprio dia, deixa a curva mais estável. O ano é tratado
-    como um círculo: o fim de dezembro é vizinho do começo de janeiro.
-
-    ``df_ref`` deve conter só os anos de referência (use ``dados.filtrar_referencia``).
-    Devolve as colunas ``PONTO, doy, dtr_clim``.
+    É a média de todos os dias da janela centrada no dia (31 dias por padrão), em todos os
+    anos de referência. O ano é circular: dezembro é vizinho de janeiro.
+    Devolve ``PONTO, doy, dtr_clim``. Passe só anos de referência.
     """
     if janela % 2 == 0:
         raise ValueError("janela deve ser ímpar (o dia fica no centro)")
@@ -97,13 +66,12 @@ def climatologia_dtr(df_ref: pd.DataFrame, janela: int = 31) -> pd.DataFrame:
         "doy": dia_do_ano_365(df_ref["data"]),
         "dtr": amplitude_termica(df_ref).to_numpy(),
     })
-    # soma e contagem por ponto e dia do ano; a média da janela é soma/contagem dos 31 dias
     tab_soma = base.pivot_table(index="PONTO", columns="doy", values="dtr", aggfunc="sum").reindex(columns=range(1, 366))
     tab_cont = base.pivot_table(index="PONTO", columns="doy", values="dtr", aggfunc="count").reindex(index=tab_soma.index, columns=range(1, 366))
     pontos = tab_soma.index.to_list()
     soma, cont = tab_soma.fillna(0.0).to_numpy(), tab_cont.fillna(0).to_numpy()
     meia = janela // 2
-    # np.roll desloca as colunas "dando a volta", o que faz a janela circular
+    # np.roll "dá a volta" no ano, o que torna a janela circular
     soma_j = sum(np.roll(soma, k, axis=1) for k in range(-meia, meia + 1))
     cont_j = sum(np.roll(cont, k, axis=1) for k in range(-meia, meia + 1))
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -116,7 +84,7 @@ def climatologia_dtr(df_ref: pd.DataFrame, janela: int = 31) -> pd.DataFrame:
 
 
 def anomalia_dtr(df: pd.DataFrame, clim: pd.DataFrame) -> pd.Series:
-    """Quanto a amplitude do dia ficou acima (+) ou abaixo (−) do normal daquele dia (°C)."""
+    """Amplitude do dia menos a normal daquele dia (°C)."""
     chave = pd.DataFrame({"PONTO": df["PONTO"].to_numpy(), "doy": dia_do_ano_365(df["data"])})
     ref = chave.merge(clim, on=["PONTO", "doy"], how="left")["dtr_clim"].to_numpy()
     return pd.Series(amplitude_termica(df).to_numpy() - ref, index=df.index, name="anomalia_dtr")
@@ -124,19 +92,12 @@ def anomalia_dtr(df: pd.DataFrame, clim: pd.DataFrame) -> pd.Series:
 
 def indicador_estiagem(df: pd.DataFrame, clim: pd.DataFrame, n_dias: int = 10,
                        limiar_alta: float | None = None) -> pd.DataFrame:
-    """Indicador de condição seca nos últimos ``n_dias`` dias (contando o dia ``t``).
+    """Indicador de tempo seco nos últimos ``n_dias`` dias.
 
-    Devolve:
+    Colunas: ``anomalia_dtr`` (do dia), ``anomalia_media`` (média da janela) e, se houver
+    limiar, ``frac_dias_alta`` (fração de dias com anomalia >= ``limiar_alta``).
 
-    - ``anomalia_dtr``: anomalia da amplitude no próprio dia;
-    - ``anomalia_media``: média da anomalia nos últimos ``n_dias`` dias;
-    - ``frac_dias_alta``: fração desses dias com anomalia ``>= limiar_alta`` (só se o
-      limiar for informado).
-
-    Atenção: a amplitude alta é um **sintoma** de que o tempo está seco, não um aviso de
-    que vai ficar seco. Por isso o indicador é só informativo e não entra na probabilidade
-    combinada de eventos (``p_algum``); a falta de chuva já é tratada pela torre de
-    simulação hídrica.
+    É um sintoma de tempo seco, não uma previsão; por isso não entra em ``p_algum``.
     """
     anom = anomalia_dtr(df, clim)
     tmp = pd.DataFrame({"PONTO": df["PONTO"].to_numpy(), "anom": anom.to_numpy()}, index=df.index)
