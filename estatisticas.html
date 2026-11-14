@@ -1,0 +1,1147 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AgroData | Estatísticas</title>
+
+    <!-- Biblioteca Chart.js para construção dos gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --verde-escuro: #23452f;
+            --verde: #477b43;
+            --verde-claro: #e4efdf;
+            --amarelo: #e9bd45;
+            --terra: #a36c43;
+            --fundo: #f3f5ed;
+            --branco: #ffffff;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--fundo);
+            color: #283b2b;
+        }
+
+        /* CABEÇALHO */
+
+        header {
+            background-color: var(--verde-escuro);
+            color: white;
+            padding: 25px 7%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .logo span {
+            color: var(--amarelo);
+        }
+
+        header p {
+            font-size: 13px;
+            color: #d7e2d3;
+            margin-top: 5px;
+        }
+
+        .header-tag {
+            background-color: #355b3b;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        /* CONTEÚDO PRINCIPAL */
+
+        main {
+            max-width: 1250px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        .titulo-pagina {
+            margin-bottom: 25px;
+        }
+
+        .titulo-pagina h1 {
+            font-size: 28px;
+            color: var(--verde-escuro);
+            margin-bottom: 8px;
+        }
+
+        .titulo-pagina p {
+            color: #718071;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* NAVEGAÇÃO */
+
+        .navegacao {
+            margin-bottom: 25px;
+        }
+
+        .botao-voltar {
+            display: inline-block;
+            text-decoration: none;
+            color: var(--verde-escuro);
+            font-size: 13px;
+            font-weight: bold;
+            padding: 11px 16px;
+            background-color: white;
+            border: 1px solid #d8dfd4;
+            border-radius: 7px;
+            transition: 0.2s;
+        }
+
+        .botao-voltar:hover {
+            background-color: var(--verde-claro);
+        }
+
+        /* AVISO */
+
+        .aviso {
+            padding: 15px 18px;
+            background-color: #fff3d2;
+            border-left: 4px solid var(--amarelo);
+            border-radius: 7px;
+            margin-bottom: 28px;
+            font-size: 13px;
+            color: #806322;
+            line-height: 1.5;
+        }
+
+        /* INDICADORES */
+
+        .indicadores {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+
+        .indicador {
+            background-color: white;
+            padding: 22px;
+            border-radius: 10px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+            border-left: 4px solid var(--verde);
+        }
+
+        .indicador:nth-child(2) {
+            border-color: var(--amarelo);
+        }
+
+        .indicador:nth-child(3) {
+            border-color: var(--terra);
+        }
+
+        .indicador:nth-child(4) {
+            border-color: #729b70;
+        }
+
+        .indicador span {
+            display: block;
+            font-size: 12px;
+            color: #788578;
+            margin-bottom: 10px;
+        }
+
+        .indicador h2 {
+            font-size: 25px;
+            color: var(--verde-escuro);
+            margin-bottom: 5px;
+        }
+
+        .indicador small {
+            font-size: 11px;
+            color: #899489;
+        }
+
+        /* SEÇÕES */
+
+        .secao-titulo {
+            font-size: 19px;
+            color: var(--verde-escuro);
+            margin-bottom: 18px;
+        }
+
+        .secao-descricao {
+            color: #778477;
+            font-size: 13px;
+            margin-top: -10px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* GRÁFICOS */
+
+        .grade-graficos {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 22px;
+            margin-bottom: 35px;
+        }
+
+        .grafico-card {
+            background-color: white;
+            padding: 24px;
+            border-radius: 11px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+            min-width: 0;
+        }
+
+        .grafico-card h3 {
+            color: var(--verde-escuro);
+            font-size: 16px;
+            margin-bottom: 7px;
+        }
+
+        .grafico-card p {
+            font-size: 12px;
+            color: #849184;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .grafico-container {
+            position: relative;
+            width: 100%;
+            height: 280px;
+        }
+
+        /* ANÁLISE */
+
+        .analise {
+            margin-bottom: 35px;
+        }
+
+        .analise-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .analise-card {
+            background-color: white;
+            padding: 22px;
+            border-radius: 10px;
+            border-top: 4px solid var(--verde);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+        }
+
+        .analise-card:nth-child(2) {
+            border-color: var(--amarelo);
+        }
+
+        .analise-card:nth-child(3) {
+            border-color: var(--terra);
+        }
+
+        .analise-card h3 {
+            font-size: 15px;
+            color: var(--verde-escuro);
+            margin-bottom: 10px;
+        }
+
+        .analise-card p {
+            font-size: 12px;
+            color: #718071;
+            line-height: 1.7;
+        }
+
+        /* TABELA */
+
+        .tabela-secao {
+            background-color: white;
+            padding: 25px;
+            border-radius: 11px;
+            margin-bottom: 35px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 550px;
+        }
+
+        th {
+            background-color: #edf2e9;
+            color: var(--verde-escuro);
+            font-size: 12px;
+            padding: 14px;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid #edf0e9;
+            font-size: 12px;
+            color: #647364;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .status-alto {
+            background-color: #e2f1e3;
+            color: #35743d;
+        }
+
+        .status-medio {
+            background-color: #fff3d2;
+            color: #9c751c;
+        }
+
+        .status-baixo {
+            background-color: #f9e5e3;
+            color: #a8433c;
+        }
+
+        /* RODAPÉ */
+
+        footer {
+            background-color: #1b3624;
+            color: #c5d2c3;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+        }
+
+        /* RESPONSIVIDADE */
+
+        @media (max-width: 1000px) {
+            .indicadores {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .analise-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 750px) {
+            .grade-graficos {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 20px;
+            }
+
+            .header-tag {
+                display: none;
+            }
+
+            main {
+                padding: 0 15px;
+            }
+
+            .indicadores {
+                grid-template-columns: 1fr;
+            }
+
+            .grafico-card {
+                padding: 18px;
+            }
+
+            .grafico-container {
+                height: 250px;
+            }
+
+            .titulo-pagina h1 {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- CABEÇALHO -->
+
+    <header>
+        <div>
+            <div class="logo">Agro<span>Data</span></div>
+            <p>Inteligência agrícola para decisões mais sustentáveis</p>
+        </div>
+
+        <div class="header-tag">
+            Painel de estatísticas
+        </div>
+    </header>
+
+    <main>
+
+        <!-- NAVEGAÇÃO -->
+
+        <div class="navegacao">
+            <a href="page.html" class="botao-voltar">
+                ← Voltar para recomendações
+            </a>
+        </div>
+
+        <!-- INTRODUÇÃO -->
+
+        <section class="titulo-pagina">
+            <h1>Painel de estatísticas agrícolas</h1>
+
+            <p>
+                Visualize indicadores de produtividade, condições climáticas,
+                características do solo e distribuição das culturas.
+                Utilize os dados para compreender melhor o cenário agrícola.
+            </p>
+        </section>
+
+        <!-- AVISO -->
+
+        <div class="aviso">
+            <strong>Dados demonstrativos:</strong>
+            todos os indicadores, gráficos e valores desta página são fictícios
+            e foram criados exclusivamente para ilustrar o funcionamento
+            do painel.
+        </div>
+
+        <!-- INDICADORES PRINCIPAIS -->
+
+        <section class="indicadores">
+
+            <div class="indicador">
+                <span>Produtividade média</span>
+                <h2>4,2 t/ha</h2>
+                <small>Média fictícia das culturas analisadas</small>
+            </div>
+
+            <div class="indicador">
+                <span>Precipitação acumulada</span>
+                <h2>680 mm</h2>
+                <small>Período demonstrativo</small>
+            </div>
+
+            <div class="indicador">
+                <span>Área analisada</span>
+                <h2>120 ha</h2>
+                <small>Área fictícia de referência</small>
+            </div>
+
+            <div class="indicador">
+                <span>Matéria orgânica</span>
+                <h2>3,1%</h2>
+                <small>Valor médio demonstrativo</small>
+            </div>
+
+        </section>
+
+        <!-- GRÁFICOS -->
+
+        <section>
+
+            <h2 class="secao-titulo">
+                01. Produtividade agrícola
+            </h2>
+
+            <p class="secao-descricao">
+                Comparação da produtividade média estimada entre diferentes culturas.
+            </p>
+
+            <div class="grade-graficos">
+
+                <!-- GRÁFICO 1 -->
+
+                <div class="grafico-card">
+
+                    <h3>Produtividade por cultura</h3>
+
+                    <p>
+                        Comparação da produção em toneladas por hectare.
+                    </p>
+
+                    <div class="grafico-container">
+                        <canvas id="graficoProdutividade"></canvas>
+                    </div>
+
+                </div>
+
+                <!-- GRÁFICO 2 -->
+
+                <div class="grafico-card">
+
+                    <h3>Distribuição da área cultivada</h3>
+
+                    <p>
+                        Participação de cada cultura na área total analisada.
+                    </p>
+
+                    <div class="grafico-container">
+                        <canvas id="graficoCulturas"></canvas>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- CLIMA -->
+
+        <section>
+
+            <h2 class="secao-titulo">
+                02. Condições meteorológicas
+            </h2>
+
+            <p class="secao-descricao">
+                Acompanhe a variação de temperatura e precipitação ao longo dos meses.
+            </p>
+
+            <div class="grade-graficos">
+
+                <!-- GRÁFICO 3 -->
+
+                <div class="grafico-card">
+
+                    <h3>Temperatura e precipitação</h3>
+
+                    <p>
+                        Relação entre a temperatura média e a chuva acumulada mensal.
+                    </p>
+
+                    <div class="grafico-container">
+                        <canvas id="graficoClima"></canvas>
+                    </div>
+
+                </div>
+
+                <!-- GRÁFICO 4 -->
+
+                <div class="grafico-card">
+
+                    <h3>Precipitação mensal</h3>
+
+                    <p>
+                        Volume de chuva registrado em cada mês do período fictício.
+                    </p>
+
+                    <div class="grafico-container">
+                        <canvas id="graficoChuva"></canvas>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- SOLO -->
+
+        <section>
+
+            <h2 class="secao-titulo">
+                03. Indicadores de solo
+            </h2>
+
+            <p class="secao-descricao">
+                Indicadores ilustrativos para avaliação das características
+                físicas e químicas do solo.
+            </p>
+
+            <div class="grade-graficos">
+
+                <!-- GRÁFICO 5 -->
+
+                <div class="grafico-card">
+
+                    <h3>Características do solo</h3>
+
+                    <p>
+                        Valores demonstrativos de alguns indicadores da área.
+                    </p>
+
+                    <div class="grafico-container">
+                        <canvas id="graficoSolo"></canvas>
+                    </div>
+
+                </div>
+
+                <!-- GRÁFICO 6 -->
+
+                <div class="grafico-card">
+
+                    <h3>Indicadores de manejo</h3>
+
+                    <p>
+                        Comparação ilustrativa entre indicadores em uma escala de 0 a 100.
+                    </p>
+
+                    <div class="grafico-container">
+                        <canvas id="graficoManejo"></canvas>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ANÁLISES -->
+
+        <section class="analise">
+
+            <h2 class="secao-titulo">
+                04. Interpretação dos dados
+            </h2>
+
+            <p class="secao-descricao">
+                Exemplos de observações que podem ser extraídas dos indicadores.
+            </p>
+
+            <div class="analise-grid">
+
+                <div class="analise-card">
+                    <h3>Produtividade</h3>
+
+                    <p>
+                        No cenário demonstrativo, o milho apresenta a maior
+                        produtividade média entre as culturas comparadas.
+                        A produtividade, entretanto, depende de fatores como
+                        cultivar, manejo, solo e disponibilidade hídrica.
+                    </p>
+                </div>
+
+                <div class="analise-card">
+                    <h3>Condições climáticas</h3>
+
+                    <p>
+                        A distribuição das chuvas varia ao longo do período.
+                        Essa informação pode auxiliar na avaliação das épocas
+                        de plantio e das necessidades de manejo hídrico.
+                    </p>
+                </div>
+
+                <div class="analise-card">
+                    <h3>Condições do solo</h3>
+
+                    <p>
+                        Os indicadores de matéria orgânica, pH e nutrientes
+                        podem auxiliar na identificação de necessidades
+                        de correção e planejamento do manejo.
+                    </p>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- TABELA -->
+
+        <section class="tabela-secao">
+
+            <h2 class="secao-titulo">
+                05. Resumo das culturas
+            </h2>
+
+            <p class="secao-descricao">
+                Comparação demonstrativa dos principais indicadores por cultura.
+            </p>
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Cultura</th>
+                        <th>Produtividade</th>
+                        <th>Consumo hídrico</th>
+                        <th>Avaliação demonstrativa</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    <tr>
+                        <td>Milho</td>
+                        <td>6,5 t/ha</td>
+                        <td>Alto</td>
+                        <td>
+                            <span class="status status-alto">Alto desempenho</span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Soja</td>
+                        <td>3,8 t/ha</td>
+                        <td>Médio</td>
+                        <td>
+                            <span class="status status-medio">Desempenho médio</span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Feijão</td>
+                        <td>2,4 t/ha</td>
+                        <td>Médio</td>
+                        <td>
+                            <span class="status status-medio">Desempenho médio</span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Sorgo</td>
+                        <td>3,2 t/ha</td>
+                        <td>Baixo</td>
+                        <td>
+                            <span class="status status-medio">Desempenho médio</span>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Girassol</td>
+                        <td>2,1 t/ha</td>
+                        <td>Médio</td>
+                        <td>
+                            <span class="status status-baixo">Menor produtividade</span>
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </main>
+
+    <!-- RODAPÉ -->
+
+    <footer>
+        DataLab © 2026 | Plataforma de apoio à decisão do produtor.
+
+        <br><br>
+
+        Dados, gráficos e indicadores apresentados nesta versão são fictícios.
+    </footer>
+
+
+    <!-- JAVASCRIPT DOS GRÁFICOS -->
+
+    <script>
+
+        // CONFIGURAÇÕES GERAIS
+
+        Chart.defaults.font.family = "Arial";
+
+        Chart.defaults.color = "#718071";
+
+        // CORES UTILIZADAS NOS GRÁFICOS
+
+        const cores = {
+            verdeEscuro: "#23452f",
+            verde: "#477b43",
+            verdeClaro: "#91b58b",
+            amarelo: "#e9bd45",
+            terra: "#a36c43",
+            vermelho: "#cf6660"
+        };
+
+
+        // GRÁFICO 1 - PRODUTIVIDADE POR CULTURA
+
+        new Chart(
+            document.getElementById("graficoProdutividade"),
+            {
+                type: "bar",
+
+                data: {
+                    labels: [
+                        "Milho",
+                        "Soja",
+                        "Sorgo",
+                        "Feijão",
+                        "Girassol"
+                    ],
+
+                    datasets: [{
+                        label: "Produtividade (t/ha)",
+
+                        data: [6.5, 3.8, 3.2, 2.4, 2.1],
+
+                        backgroundColor: [
+                            cores.verdeEscuro,
+                            cores.verde,
+                            cores.verdeClaro,
+                            cores.amarelo,
+                            cores.terra
+                        ],
+
+                        borderRadius: 6
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+
+                            title: {
+                                display: true,
+                                text: "Toneladas por hectare"
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+
+        // GRÁFICO 2 - DISTRIBUIÇÃO DAS CULTURAS
+
+        new Chart(
+            document.getElementById("graficoCulturas"),
+            {
+                type: "doughnut",
+
+                data: {
+                    labels: [
+                        "Soja",
+                        "Milho",
+                        "Feijão",
+                        "Sorgo",
+                        "Outras"
+                    ],
+
+                    datasets: [{
+                        data: [40, 25, 15, 10, 10],
+
+                        backgroundColor: [
+                            cores.verdeEscuro,
+                            cores.verde,
+                            cores.amarelo,
+                            cores.terra,
+                            cores.verdeClaro
+                        ],
+
+                        borderWidth: 2,
+                        borderColor: "#ffffff"
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            position: "bottom"
+                        }
+                    }
+                }
+            }
+        );
+
+
+        // GRÁFICO 3 - TEMPERATURA E PRECIPITAÇÃO
+
+        new Chart(
+            document.getElementById("graficoClima"),
+            {
+                type: "line",
+
+                data: {
+                    labels: [
+                        "Jan",
+                        "Fev",
+                        "Mar",
+                        "Abr",
+                        "Mai",
+                        "Jun",
+                        "Jul",
+                        "Ago",
+                        "Set",
+                        "Out",
+                        "Nov",
+                        "Dez"
+                    ],
+
+                    datasets: [
+
+                        {
+                            label: "Temperatura (°C)",
+
+                            data: [
+                                25, 25, 24, 23, 21, 20,
+                                20, 22, 24, 25, 24, 25
+                            ],
+
+                            borderColor: cores.verdeEscuro,
+                            backgroundColor: cores.verde,
+                            yAxisID: "y",
+
+                            tension: 0.3,
+                            pointRadius: 3
+                        },
+
+                        {
+                            label: "Precipitação (mm)",
+
+                            data: [
+                                220, 190, 160, 80, 35, 15,
+                                10, 20, 60, 120, 180, 210
+                            ],
+
+                            borderColor: cores.amarelo,
+                            backgroundColor: cores.amarelo,
+                            yAxisID: "y1",
+
+                            tension: 0.3,
+                            pointRadius: 3
+                        }
+
+                    ]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    interaction: {
+                        mode: "index",
+                        intersect: false
+                    },
+
+                    scales: {
+
+                        y: {
+                            type: "linear",
+                            position: "left",
+
+                            title: {
+                                display: true,
+                                text: "Temperatura (°C)"
+                            }
+                        },
+
+                        y1: {
+                            type: "linear",
+                            position: "right",
+
+                            title: {
+                                display: true,
+                                text: "Chuva (mm)"
+                            },
+
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+
+                    }
+                }
+            }
+        );
+
+
+        // GRÁFICO 4 - PRECIPITAÇÃO MENSAL
+
+        new Chart(
+            document.getElementById("graficoChuva"),
+            {
+                type: "bar",
+
+                data: {
+                    labels: [
+                        "Jan",
+                        "Fev",
+                        "Mar",
+                        "Abr",
+                        "Mai",
+                        "Jun",
+                        "Jul",
+                        "Ago",
+                        "Set",
+                        "Out",
+                        "Nov",
+                        "Dez"
+                    ],
+
+                    datasets: [{
+                        label: "Precipitação (mm)",
+
+                        data: [
+                            220, 190, 160, 80, 35, 15,
+                            10, 20, 60, 120, 180, 210
+                        ],
+
+                        backgroundColor: cores.verde,
+                        borderRadius: 5
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+
+                            title: {
+                                display: true,
+                                text: "Milímetros de chuva"
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+
+        // GRÁFICO 5 - CARACTERÍSTICAS DO SOLO
+
+        new Chart(
+            document.getElementById("graficoSolo"),
+            {
+                type: "bar",
+
+                data: {
+                    labels: [
+                        "Matéria orgânica (%)",
+                        "pH",
+                        "Fósforo (mg/dm³)",
+                        "Potássio (mg/dm³)"
+                    ],
+
+                    datasets: [{
+                        label: "Valor demonstrativo",
+
+                        data: [3.1, 5.8, 18, 95],
+
+                        backgroundColor: [
+                            cores.verde,
+                            cores.amarelo,
+                            cores.terra,
+                            cores.verdeClaro
+                        ],
+
+                        borderRadius: 5
+                    }]
+                },
+
+                options: {
+                    indexAxis: "y",
+
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            }
+        );
+
+
+        // GRÁFICO 6 - INDICADORES DE MANEJO
+
+        new Chart(
+            document.getElementById("graficoManejo"),
+            {
+                type: "radar",
+
+                data: {
+                    labels: [
+                        "Cobertura do solo",
+                        "Retenção de água",
+                        "Matéria orgânica",
+                        "Diversidade",
+                        "Estrutura do solo"
+                    ],
+
+                    datasets: [{
+                        label: "Condição demonstrativa",
+
+                        data: [80, 65, 70, 90, 60],
+
+                        backgroundColor: "rgba(71, 123, 67, 0.2)",
+
+                        borderColor: cores.verde,
+
+                        pointBackgroundColor: cores.verde,
+
+                        borderWidth: 2
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 100,
+
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+    </script>
+
+</body>
+</html>
