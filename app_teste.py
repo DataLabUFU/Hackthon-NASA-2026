@@ -1,166 +1,196 @@
-"""Versão de teste: formulário do produtor + 3 cartões (verde, amarelo, vermelho).
+"""AgroData: interface Streamlit (convertida do HTML). A lógica fica em motor.py.
 
-SEM DADOS REAIS. As regras de pontuação abaixo são de exemplo, só para a interface reagir.
-Depois, troque a função `avaliar` pelo motor de pontuação de verdade (scoring.py).
-
-Rodar:  pip install streamlit   e   streamlit run app.py
+Rodar:  pip install -r requirements.txt   e   streamlit run app.py
+Modelo real:  MOTOR_RECOMENDACAO=modelo streamlit run app.py
 """
-from datetime import date, timedelta
+from datetime import date
 from html import escape
 
+import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="O que plantar a seguir?", layout="wide")
+import motor as mt
 
-# ---------------------------------------------------------------- listas de escolha
-# Lista de exemplo. Para todas as cidades do Brasil, use a API de localidades do IBGE.
-CIDADES = {
-    "Acre": ["Rio Branco"], "Alagoas": ["Maceió"], "Amapá": ["Macapá"], "Amazonas": ["Manaus"],
-    "Bahia": ["Salvador", "Luís Eduardo Magalhães", "Barreiras"], "Ceará": ["Fortaleza"],
-    "Distrito Federal": ["Brasília"], "Espírito Santo": ["Vitória"],
-    "Goiás": ["Goiânia", "Rio Verde", "Jataí"], "Maranhão": ["São Luís", "Balsas"],
-    "Mato Grosso": ["Cuiabá", "Sorriso", "Rondonópolis"], "Mato Grosso do Sul": ["Campo Grande", "Dourados"],
-    "Minas Gerais": ["Uberlândia", "Uberaba", "Araguari", "Patos de Minas", "Belo Horizonte"],
-    "Pará": ["Belém"], "Paraíba": ["João Pessoa"], "Paraná": ["Curitiba", "Londrina", "Cascavel"],
-    "Pernambuco": ["Recife"], "Piauí": ["Teresina", "Uruçuí"], "Rio de Janeiro": ["Rio de Janeiro"],
-    "Rio Grande do Norte": ["Natal"], "Rio Grande do Sul": ["Porto Alegre", "Passo Fundo"],
-    "Rondônia": ["Porto Velho"], "Roraima": ["Boa Vista"], "Santa Catarina": ["Florianópolis", "Chapecó"],
-    "São Paulo": ["São Paulo", "Ribeirão Preto", "Campinas"], "Sergipe": ["Aracaju"], "Tocantins": ["Palmas"],
+st.set_page_config(page_title="AgroData | Rotação de Culturas", layout="wide")
+
+CSS = """<style>
+:root{--verde-escuro:#23452f;--verde:#477b43;--verde-claro:#e4efdf;--amarelo:#e9bd45}
+.stApp{background:#f3f5ed}
+.block-container{max-width:1250px;padding-top:1.5rem;padding-bottom:2rem}
+#MainMenu,footer{visibility:hidden}
+.topo{background:var(--verde-escuro);color:#fff;padding:25px 30px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}
+.logo{font-size:25px;font-weight:bold}.logo span{color:var(--amarelo)}
+.topo p{font-size:13px;color:#d7e2d3;margin:5px 0 0}
+.header-tag{background:#355b3b;padding:10px 16px;border-radius:20px;font-size:13px;white-space:nowrap}
+.pagina-titulo{font-size:28px;font-weight:bold;color:var(--verde-escuro);margin-bottom:8px}
+.pagina-sub{color:#718071;font-size:14px;margin-bottom:20px}
+.secao-titulo{font-size:19px;font-weight:bold;color:var(--verde-escuro);margin:18px 0 14px;padding-bottom:10px;border-bottom:1px solid #e5e9df}
+[data-testid="stWidgetLabel"] p{font-weight:bold;font-size:13px;color:#405342}
+div[data-testid="stVerticalBlockBorderWrapper"]{background:#fff;border-radius:12px}
+.stButton>button{width:100%;padding:.8rem;font-weight:bold}
+.resultado-titulo{font-size:23px;font-weight:bold;color:var(--verde-escuro);margin:35px 0 7px}
+.resultado-resumo{font-size:13px;color:#778477;line-height:1.6;margin-bottom:25px}
+.grupo-titulo{padding:16px;border-radius:9px;font-size:15px;font-weight:bold;text-align:center;margin-bottom:15px}
+.grupo-verde{background:#e2f1e3;color:#35743d;border:1px solid #c7e3c9}
+.grupo-amarelo{background:#fff3d2;color:#9c751c;border:1px solid #f0dfad}
+.grupo-vermelho{background:#f9e5e3;color:#a8433c;border:1px solid #edc9c5}
+.card{background:#fff;border-radius:11px;border-top:4px solid;box-shadow:0 3px 12px rgba(0,0,0,.04);margin-bottom:15px;overflow:hidden}
+.card-verde{border-color:#4c9957}.card-amarelo{border-color:#e6b83f}.card-vermelho{border-color:#cf6660}
+.card-resumo{list-style:none;cursor:pointer;padding:20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.card-resumo::-webkit-details-marker{display:none}
+.card-resumo:hover{background:#f8faf6}
+.card-titulo{color:var(--verde-escuro);font-size:17px;font-weight:bold}
+.card-identificacao{display:flex;flex-direction:column;gap:6px}
+.card-posicao{font-size:11px;color:#778477;font-weight:bold}
+.card-seta{font-size:20px;color:#718071;transition:transform .25s}
+.card[open] .card-seta{transform:rotate(180deg)}
+.card-conteudo{padding:0 20px 22px}
+.descricao{color:#7b897b;font-size:12px;margin:0 0 14px;line-height:1.5}
+.card-sub{font-size:13px;font-weight:bold;margin:14px 0 10px;color:#405342}
+.card ul{padding-left:18px;margin:0}
+.card li{font-size:12px;color:#667466;margin-bottom:8px;line-height:1.5}
+.clima{background:#f2f5ee;border-radius:8px;padding:12px;margin-top:6px}
+.clima p{font-size:12px;margin:0 0 7px;color:#526451;line-height:1.4}.clima p:last-child{margin:0}
+.clima strong{color:var(--verde-escuro)}
+.estatisticas{background:var(--verde-escuro);color:#fff;border-radius:12px;padding:30px;margin:35px 0 12px}
+.estatisticas-titulo{font-size:21px;font-weight:bold;margin-bottom:9px}
+.estatisticas p{font-size:13px;color:#d1dfcf;line-height:1.6;margin:0}
+.rodape{background:#1b3624;color:#c5d2c3;text-align:center;padding:20px;font-size:12px;border-radius:12px;margin-top:30px}
+</style>"""
+
+# título do grupo, cor, rótulo da lista de motivos
+GRUPOS = {
+    "recomendadas": ("Culturas recomendadas", "verde", "Por que recomendamos?"),
+    "razoaveis": ("Alternativas razoáveis", "amarelo", "Por que considerar?"),
+    "nao_recomendadas": ("Culturas não recomendadas", "vermelho", "Por que evitar?"),
 }
 
-PROBLEMAS = {
-    "compactado": "Solo duro ou compactado", "seca": "Falta de água ou veranico",
-    "erosao": "Erosão (a terra escorre)", "pragas": "Pragas", "doencas": "Doenças",
-    "nematoide": "Nematoides", "daninhas": "Plantas daninhas difíceis",
-    "fraco": "Solo fraco ou cansado", "geada": "Risco de geada",
-}
-OBJETIVOS = {
-    "compactacao": "Menos compactação", "agua": "Reter mais água no solo",
-    "nitrogenio": "Aumentar o nitrogênio", "pragas": "Lidar com pragas e doenças",
-    "erosao": "Proteger o solo da erosão", "materia_organica": "Mais palhada e matéria orgânica",
-    "seca": "Aguentar seca e calor", "renda": "Ganhar dinheiro com a safra",
-}
 
-# Dados FICTÍCIOS de exemplo (ajuda = objetivos que atende; resolve/piora = problemas).
-CULTURAS = {
-    "Soja": dict(fam="Fabaceae", meses=[10, 11, 12], ajuda={"nitrogenio", "renda"}, resolve=set(), piora={"compactado", "nematoide", "geada"}),
-    "Milho": dict(fam="Poaceae", meses=[1, 2, 10, 11], ajuda={"materia_organica", "renda", "erosao"}, resolve=set(), piora={"seca"}),
-    "Sorgo": dict(fam="Poaceae", meses=[1, 2, 3, 10, 11], ajuda={"seca", "materia_organica", "compactacao", "renda"}, resolve={"compactado", "seca"}, piora={"geada"}),
-    "Milheto": dict(fam="Poaceae", meses=[2, 3, 10, 11], ajuda={"compactacao", "materia_organica", "seca", "erosao", "agua", "pragas"}, resolve={"compactado", "erosao", "seca", "nematoide"}, piora={"geada"}),
-    "Braquiária": dict(fam="Poaceae", meses=[2, 3, 4, 10, 11], ajuda={"compactacao", "agua", "materia_organica", "erosao"}, resolve={"compactado", "erosao", "daninhas", "fraco"}, piora=set()),
-    "Crotalária": dict(fam="Fabaceae", meses=[10, 11, 12, 1, 2], ajuda={"nitrogenio", "pragas", "materia_organica"}, resolve={"nematoide", "fraco", "daninhas"}, piora={"geada"}),
-    "Feijão": dict(fam="Fabaceae", meses=[2, 3, 4, 5], ajuda={"nitrogenio", "renda"}, resolve=set(), piora={"compactado", "seca", "geada"}),
-    "Girassol": dict(fam="Asteraceae", meses=[2, 3, 10], ajuda={"compactacao", "seca", "renda"}, resolve={"compactado", "seca"}, piora=set()),
-    "Nabo forrageiro": dict(fam="Brassicaceae", meses=[3, 4, 5], ajuda={"compactacao", "erosao", "pragas", "agua"}, resolve={"compactado", "nematoide", "daninhas", "geada"}, piora=set()),
-    "Aveia preta": dict(fam="Poaceae", meses=[4, 5], ajuda={"materia_organica", "erosao", "agua"}, resolve={"erosao", "geada", "doencas"}, piora=set()),
-    "Trigo": dict(fam="Poaceae", meses=[4, 5], ajuda={"renda"}, resolve={"geada"}, piora={"seca"}),
-    "Guandu": dict(fam="Fabaceae", meses=[10, 11, 12], ajuda={"compactacao", "nitrogenio", "seca", "materia_organica"}, resolve={"compactado", "fraco", "seca"}, piora={"geada"}),
-}
-NENHUM = "(nenhum / área em descanso)"
-MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+# ------------------------------------------------------------------ captura dos dados (formulário -> Entrada)
+def grade_checkbox(prefixo: str, opcoes: dict) -> list:
+    """Grade de 3 colunas com caixas de marcar. Devolve os VALORES marcados."""
+    colunas = st.columns(3)
+    return [valor for i, (valor, rotulo) in enumerate(opcoes.items())
+            if colunas[i % 3].checkbox(rotulo, key=f"{prefixo}_{valor}")]
 
 
-# ---------------------------------------------------------------- regras de exemplo
-def avaliar(nome, c, ctx):
-    """Troque esta função pelo motor de pontuação real. Devolve nota 0-100 e os motivos."""
-    nota, pos, neg = 50, [], []
-    for o in ctx["objetivos"]:
-        if o in c["ajuda"]:
-            nota += 12
-            pos.append(f"Ajuda no seu objetivo: {OBJETIVOS[o].lower()}")
-    for p in ctx["problemas"]:
-        if p in c["resolve"]:
-            nota += 10
-            pos.append(f"Ajuda a combater: {PROBLEMAS[p].lower()}")
-        if p in c["piora"]:
-            nota -= 12
-            neg.append(f"Pode piorar: {PROBLEMAS[p].lower()}")
-    mes = ctx["data"].month
-    if mes in c["meses"]:
-        nota += 10
-        pos.append(f"{MESES[mes - 1].capitalize()} está dentro da época de plantio")
+def coletar_entrada():
+    """Desenha o formulário e devolve (Entrada, clicou_no_botao)."""
+    with st.container(border=True):
+        st.markdown('<div class="secao-titulo">01. Características da propriedade</div>', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        penultimo = c1.selectbox("Penúltimo plantio", mt.CULTURAS_HISTORICO, index=None, placeholder="Selecione a cultura")
+        ultimo = c2.selectbox("Último plantio", mt.CULTURAS_HISTORICO, index=None, placeholder="Selecione a cultura")
+
+        c3, c4 = st.columns(2)
+        uf = c3.selectbox("Estado", list(mt.ESTADOS), index=None, placeholder="Selecione o estado",
+                          format_func=lambda u: mt.ESTADOS[u][0])
+        cidade = c4.selectbox("Cidade", mt.ESTADOS[uf][1] if uf else [], index=None, disabled=not uf,
+                              placeholder="Selecione a cidade" if uf else "Selecione primeiro o estado",
+                              key=f"cidade_{uf}")      # a chave muda com o estado: a lista reinicia
+
+        c5, c6 = st.columns(2)
+        data = c5.date_input("Data prevista para a próxima plantação", value=None, format="DD/MM/YYYY")
+        desejada = c6.selectbox("Qual cultura deseja plantar?", mt.CULTURAS_DESEJADAS, index=0)
+
+        st.markdown('<div class="secao-titulo">02. Problemas identificados na área</div>', unsafe_allow_html=True)
+        problemas = grade_checkbox("prob", mt.PROBLEMAS)
+        st.markdown('<div class="secao-titulo">03. Objetivos para a próxima safra</div>', unsafe_allow_html=True)
+        objetivos = grade_checkbox("obj", mt.OBJETIVOS)
+        clicou = st.button("Analisar área e gerar recomendações", type="primary")
+
+    entrada = mt.Entrada(penultimo=penultimo, ultimo=ultimo, uf=uf, cidade=cidade, data_plantio=data,
+                         cultura_desejada=None if desejada == "Sem preferência" else desejada,
+                         problemas=problemas, objetivos=objetivos)
+    return entrada, clicou
+
+
+# ------------------------------------------------------------------ exibição (Resultado -> HTML)
+def html_card(rec, posicao: int, cor: str, titulo_motivos: str) -> str:
+    rotulo = f"{posicao}º LUGAR" + (" - MAIS RECOMENDADA" if cor == "verde" and posicao == 1 else "")
+    motivos = "".join(f"<li>{escape(m)}</li>" for m in rec.motivos)
+    c = rec.clima
+    clima = "".join(f"<p>{r}: <strong>{escape(v)}</strong></p>" for r, v in (
+        ("Temperatura ideal", c.temperatura), ("Chuva", c.chuva), ("Época", c.epoca), ("Adaptação", c.adaptacao)))
+    return (f'<details class="card card-{cor}"><summary class="card-resumo"><div class="card-identificacao">'
+            f'<span class="card-posicao">{rotulo}</span><div class="card-titulo">{escape(rec.cultura)}</div></div>'
+            f'<span class="card-seta">⌄</span></summary><div class="card-conteudo">'
+            f'<p class="descricao">{escape(rec.descricao)}</p><div class="card-sub">{titulo_motivos}</div><ul>{motivos}</ul>'
+            f'<div class="card-sub">Características meteorológicas</div><div class="clima">{clima}</div></div></details>')
+
+
+def html_resumo(e: mt.Entrada, resultado: mt.Resultado, demo: bool) -> str:
+    if demo:
+        return f"Simulação demonstrativa para {escape(e.cidade)} - {escape(e.uf)}. Os resultados abaixo são fictícios."
+    texto = (f"Área analisada: <strong>{escape(e.cidade)} - {escape(e.uf)}</strong>"
+             f" | Histórico: <strong>{escape(e.penultimo)} → {escape(e.ultimo)}</strong>"
+             f" | Próximo plantio: <strong>{e.data_plantio.strftime('%d/%m/%Y')}</strong>"
+             f" | Cultura desejada: <strong>{escape(e.cultura_desejada or 'Sem preferência')}</strong>"
+             f"<br><br>Problemas identificados: {escape(', '.join(e.problemas) or 'Nenhum informado')}"
+             f"<br>Objetivos: {escape(', '.join(e.objetivos) or 'Nenhum informado')}")
+    if resultado.fonte == "mock":
+        texto += ("<br><br><em>As recomendações exibidas são demonstrativas e ainda não são calculadas "
+                  "automaticamente com base nos dados informados.</em>")
+    return texto
+
+
+def mostrar_resultado(e: mt.Entrada, resultado: mt.Resultado, demo: bool):
+    st.markdown('<div class="resultado-titulo">Recomendações para sua próxima safra</div>'
+                f'<div class="resultado-resumo">{html_resumo(e, resultado, demo)}</div>', unsafe_allow_html=True)
+    for coluna, (chave, (titulo, cor, tit_motivos)) in zip(st.columns(3), GRUPOS.items()):
+        cards = "".join(html_card(r, i, cor, tit_motivos) for i, r in enumerate(getattr(resultado, chave), 1))
+        coluna.markdown(f'<div class="grupo-titulo grupo-{cor}">{titulo}</div>{cards}', unsafe_allow_html=True)
+
+
+def mostrar_estatisticas(e: mt.Entrada):
+    est = mt.obter_estatisticas(e)
+    df = pd.DataFrame({"Chuva (mm)": est["chuva_mm"], "Temperatura média (°C)": est["temp_c"]}, index=est["meses"])
+    st.markdown('<div class="secao-titulo">Estatísticas da região</div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    c1.markdown("**Chuva média mensal (mm)**")
+    c1.bar_chart(df["Chuva (mm)"])
+    c2.markdown("**Temperatura média mensal (°C)**")
+    c2.line_chart(df["Temperatura média (°C)"])
+    st.caption(est["aviso"])
+
+
+# ------------------------------------------------------------------ página
+st.markdown(CSS, unsafe_allow_html=True)
+st.markdown('<div class="topo"><div><div class="logo">Agro<span>Data</span></div>'
+            '<p>Inteligência agrícola para decisões mais sustentáveis</p></div>'
+            '<div class="header-tag">Apoio à rotação de culturas</div></div>'
+            '<div class="pagina-titulo">Planejamento da próxima plantação</div>'
+            '<div class="pagina-sub">Informe as condições da sua área para receber recomendações de culturas '
+            'considerando o histórico, os objetivos e o clima.</div>', unsafe_allow_html=True)
+
+entrada, clicou = coletar_entrada()
+
+if "resultado" not in st.session_state:               # primeira visita: mostra a demonstração
+    st.session_state.update(demo=True, entrada_res=mt.ENTRADA_DEMO,
+                            resultado=mt.gerar_recomendacoes(mt.ENTRADA_DEMO, motor="mock"))
+
+if clicou:
+    faltam = mt.validar_entrada(entrada)
+    if faltam:
+        st.error("Preencha " + (", ".join(faltam[:-1]) + " e " if len(faltam) > 1 else "") + faltam[-1] + ".")
     else:
-        nota -= 20
-        neg.append(f"{MESES[mes - 1].capitalize()} está fora da época de plantio recomendada")
-    ult = ctx["ultimo"]
-    if nome == ult:
-        nota -= 25
-        neg.append("É a mesma cultura do último plantio: aumenta o risco de pragas e doenças")
-    elif ult in CULTURAS and CULTURAS[ult]["fam"] == c["fam"]:
-        nota -= 10
-        neg.append("É da mesma família da cultura anterior: ajuda menos a quebrar o ciclo de pragas")
-    elif ult in CULTURAS:
-        nota += 5
-        pos.append("Muda de família em relação ao último plantio: ajuda a quebrar o ciclo de pragas")
-    return dict(nome=nome, nota=max(0, min(100, nota)), pos=pos, neg=neg)
+        try:
+            with st.spinner("Gerando recomendações..."):
+                resultado = mt.gerar_recomendacoes(entrada)
+            # guarda uma "foto" da entrada: o resultado só muda quando o produtor clicar de novo
+            st.session_state.update(demo=False, entrada_res=entrada, resultado=resultado)
+        except Exception as erro:
+            st.error(f"Não foi possível gerar as recomendações: {erro}")
 
+mostrar_resultado(st.session_state.entrada_res, st.session_state.resultado, st.session_state.demo)
 
-CORES = {"verde": ("#d7f0dc", "#2e7d32"), "amarelo": ("#fff4cc", "#b8860b"), "vermelho": ("#f9d9d9", "#c62828")}
+st.markdown('<div class="estatisticas"><div class="estatisticas-titulo">Quer entender os dados por trás das recomendações?</div>'
+            '<p>Consulte gráficos, indicadores de produtividade, características do solo, dados climáticos e estudos '
+            'utilizados para fundamentar as recomendações.</p></div>', unsafe_allow_html=True)
+if st.button("Acessar estatísticas →", key="btn_stats"):
+    st.session_state.stats = not st.session_state.get("stats", False)
+if st.session_state.get("stats"):
+    mostrar_estatisticas(st.session_state.entrada_res)
 
-
-def cartao(titulo, cor, r):
-    fundo, borda = CORES[cor]
-    lista = lambda xs, vazio: "".join(f"<li>{escape(x)}</li>" for x in xs) or f"<li>{vazio}</li>"
-    return (
-        f'<div style="background:{fundo};border-left:8px solid {borda};border-radius:12px;padding:16px 18px;color:#1b1b1b;">'
-        f'<div style="font-size:0.8rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:{borda};">{titulo}</div>'
-        f'<div style="font-size:1.6rem;font-weight:700;margin:4px 0 2px;">{escape(r["nome"])}</div>'
-        f'<div style="margin-bottom:10px;">Nota de exemplo: {r["nota"]}/100</div>'
-        f'<div style="font-weight:700;">A favor</div><ul style="margin-top:2px;">{lista(r["pos"], "Nenhum ponto forte para o que você marcou")}</ul>'
-        f'<div style="font-weight:700;">Atenção</div><ul style="margin-top:2px;">{lista(r["neg"], "Nenhum problema óbvio com o que você informou")}</ul>'
-        f"</div>"
-    )
-
-
-# ---------------------------------------------------------------- tela
-st.title("O que plantar a seguir?")
-st.warning("Versão de teste: as recomendações usam regras de exemplo, sem dados de satélite, solo ou mercado.")
-
-st.subheader("1. Onde fica a área")
-c1, c2 = st.columns(2)
-estado = c1.selectbox("Estado", sorted(CIDADES), index=sorted(CIDADES).index("Minas Gerais"))
-cidade = c2.selectbox("Cidade", CIDADES[estado], key=f"cidade_{estado}")   # a lista muda com o estado
-
-st.subheader("2. O que foi plantado antes")
-opcoes = [NENHUM] + sorted(CULTURAS)
-c1, c2 = st.columns(2)
-ultimo = c1.selectbox("Último plantio", opcoes, index=opcoes.index("Soja"))
-penultimo = c2.selectbox("Penúltimo plantio", opcoes, index=opcoes.index("Milho"))
-
-st.subheader("3. Problemas na área")
-problemas = st.multiselect("Marque todos que se aplicam", list(PROBLEMAS), format_func=PROBLEMAS.get,
-                           placeholder="Escolha um ou mais problemas")
-
-st.subheader("4. Próximo plantio")
-c1, c2 = st.columns(2)
-data = c1.date_input("Data esperada do plantio", value=date.today() + timedelta(days=30), min_value=date.today(), format="DD/MM/YYYY")
-quer = c2.selectbox("O que você quer plantar", sorted(CULTURAS), index=sorted(CULTURAS).index("Soja"))
-
-st.subheader("5. O que você quer melhorar")
-objetivos = st.multiselect("Marque todos que fazem sentido", list(OBJETIVOS), format_func=OBJETIVOS.get,
-                           placeholder="Escolha um ou mais objetivos")
-
-if st.button("Ver recomendação", type="primary"):
-    st.session_state["ver"] = True
-
-if st.session_state.get("ver"):
-    st.divider()
-    st.subheader(f"Recomendação para {cidade} - {estado}")
-    if not objetivos:
-        st.info("Nenhum objetivo marcado: as notas usam só a época de plantio, a rotação e os problemas informados.")
-    ctx = dict(objetivos=objetivos, problemas=problemas, data=data,
-               ultimo=ultimo, penultimo=penultimo)
-    res = sorted((avaliar(n, c, ctx) for n, c in CULTURAS.items()), key=lambda r: -r["nota"])
-    n = len(res)
-    melhor, medio, pior = res[0], res[n // 2], res[-1]
-
-    pos_quer = next(i for i, r in enumerate(res, 1) if r["nome"] == quer)
-    msg = f"Você quer plantar **{quer}**: ficou em {pos_quer}º lugar entre {n} opções (nota {res[pos_quer - 1]['nota']})."
-    (st.success if pos_quer <= n // 3 else st.error if pos_quer > n - n // 3 else st.warning)(msg)
-
-    k1, k2, k3 = st.columns(3)
-    k1.markdown(cartao("Mais recomendada", "verde", melhor), unsafe_allow_html=True)
-    k2.markdown(cartao("Razoável", "amarelo", medio), unsafe_allow_html=True)
-    k3.markdown(cartao("Não recomendada", "vermelho", pior), unsafe_allow_html=True)
-
-    st.caption("Ferramenta de apoio: não substitui a avaliação do agrônomo e o conhecimento local da área.")
+st.markdown('<div class="rodape">DataLab © 2026 | Plataforma de apoio à decisão do produtor.<br><br>'
+            'Dados, recomendações e indicadores apresentados nesta versão são fictícios.</div>', unsafe_allow_html=True)
