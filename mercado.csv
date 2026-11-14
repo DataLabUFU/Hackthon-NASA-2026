@@ -1,0 +1,15 @@
+nome,receita_ha,custo_ha,fonte
+soja,7200,5200,EXEMPLO - substituir por Cepea/Conab (BR) ou USDA AMS Market News (EUA)
+milho,6000,4300,EXEMPLO
+sorgo,3800,2600,EXEMPLO
+milheto,1200,600,EXEMPLO (valor de forragem/pastejo)
+crotalaria,400,500,EXEMPLO (cobertura; receita indireta)
+braquiaria,1500,700,EXEMPLO (valor de forragem/pastejo)
+feijao,6500,4800,EXEMPLO
+girassol,3600,2800,EXEMPLO
+nabo_forrageiro,600,500,EXEMPLO
+aveia_preta,1500,800,EXEMPLO
+trigo,4800,4000,EXEMPLO
+algodao,11000,9500,EXEMPLO
+mucuna,300,450,EXEMPLO
+guandu,1200,700,EXEMPLO
