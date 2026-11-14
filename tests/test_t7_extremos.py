@@ -355,3 +355,60 @@ def test_enso_valida_fases(ind_e_grupos):
     s, g = ind_e_grupos
     with pytest.raises(ValueError):
         enso.probabilidade_enso(s, g, "seca")  # nomes fora de El Niño / La Niña / Neutro
+
+
+# -------------------------------------------------------------------------------- consulta
+from datetime import date
+
+from towers.t7_extremos import consulta
+
+
+@pytest.fixture(scope="module")
+def base():
+    if not CSV.exists():
+        pytest.skip("dados_unificados.csv não está em data/raw/power/")
+    return consulta.preparar_base(config.carregar_config(overrides=["bootstrap.repeticoes=200"]))
+
+
+def test_consulta_bate_com_janela_de_safra(base, ref):
+    """Fase de 01/10 a 31/12 = mesma conta de indicador_por_safra((10, 1), (12, 31))."""
+    fases = [{"nome": "out-dez", "inicio": 0, "fim": 91, "eventos": ["chuva_extrema", "queda_brusca"]}]
+    tab = consulta.indicadores_por_ano(base, "P06", date(2026, 10, 1), fases).set_index("ano")
+    diarios = referencia.indicadores_diarios(ref, base.cfg)
+    for ev in ("chuva_extrema", "queda_brusca"):
+        s = probabilidade.indicador_por_safra(ref, diarios[ev], (10, 1), (12, 31))
+        esperado = s.query("PONTO == 'P06'").set_index("ano_safra")["evento"]
+        pd.testing.assert_series_equal(tab[ev], esperado, check_names=False, check_index_type=False)
+
+
+def test_consulta_saida(base):
+    fases = [
+        {"nome": "plantio", "inicio": 0, "fim": 20, "eventos": ["chuva_extrema", "queda_brusca"]},
+        {"nome": "colheita", "inicio": 110, "fim": 130, "eventos": ["chuva_extrema"]},
+    ]
+    r = consulta.consultar(base, "P06", date(2026, 10, 20), fases)
+    assert r["enso"] == {"enso": "nao_calculado"}
+    assert r["n_anos"] == 21  # a safra que começa em 2021 usaria 2022: fica de fora
+    pa, pc, po = r["p_algum"]["p"], r["p_chuva_extrema"]["p"], r["p_oscilacao"]["p"]
+    assert max(pc, po) - 1e-12 <= pa <= pc + po + 1e-12
+    for k in ("p_chuva_extrema", "p_oscilacao", "p_algum"):
+        assert r[k]["ic_inf"] <= r[k]["p"] <= r[k]["ic_sup"]
+    assert r["confianca"]["limiares"] == "PROVISORIO"
+
+
+def test_consulta_estiagem(base):
+    fases = [{"nome": "plantio", "inicio": 0, "fim": 10, "eventos": ["queda_brusca"]}]
+    assert consulta.consultar(base, "P01", date(2000, 1, 5), fases)["indicador_estiagem"]["status"] == "sem_dado"
+    est = consulta.consultar(base, "P01", date(2022, 6, 1), fases)["indicador_estiagem"]
+    sub = base.completo.query("PONTO == 'P01'")
+    trecho = sub[(sub["data"] >= "2022-05-22") & (sub["data"] <= "2022-05-31")]
+    assert est["anomalia_media_c"] == pytest.approx(eventos.anomalia_dtr(trecho, base.clim_dtr).mean())
+
+
+def test_consulta_valida_entrada(base):
+    with pytest.raises(ValueError):
+        consulta.indicadores_por_ano(base, "P01", date(2026, 10, 1), [{"inicio": 5, "fim": 1, "eventos": []}])
+    with pytest.raises(ValueError):
+        consulta.indicadores_por_ano(base, "P01", date(2026, 10, 1), [{"inicio": 0, "fim": 1, "eventos": ["geada"]}])
+    with pytest.raises(KeyError):
+        consulta.indicadores_por_ano(base, "P99", date(2026, 10, 1), [{"inicio": 0, "fim": 1, "eventos": ["queda_brusca"]}])
