@@ -66,16 +66,15 @@ def infer_task(y: pd.Series, max_classes: int = 20) -> str:
     return REGRESSION
 
 
-def resolve_data(args) -> tuple[pd.DataFrame, pd.Series, str]:
-    """Resolve ``--data/--target`` ou ``--demo`` e a tarefa a partir dos argumentos de CLI."""
-    if args.demo:
-        task = CLASSIFICATION if args.task == "auto" else args.task
-        X, y = make_demo_dataset(task, seed=args.seed)
+def resolve_data(cfg) -> tuple[pd.DataFrame, pd.Series, str]:
+    """Carrega o dataset (ou o demo) e resolve a tarefa a partir da seção ``data`` da config."""
+    d = cfg.data
+    if d.demo:
+        task = CLASSIFICATION if d.task == "auto" else d.task
+        X, y = make_demo_dataset(task, seed=cfg.seed)
     else:
-        if not args.data or not args.target:
-            raise SystemExit("Informe --data e --target (ou use --demo).")
-        X, y = load_dataset(args.data, args.target, args.drop)
-        task = infer_task(y) if args.task == "auto" else args.task
+        X, y = load_dataset(d.path, d.target, list(d.drop))
+        task = infer_task(y) if d.task == "auto" else d.task
     log.info("Dataset: %d linhas x %d features | tarefa=%s", len(X), X.shape[1], task)
     return X, y, task
 

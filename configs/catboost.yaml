@@ -1,0 +1,35 @@
+# Experimento catboost
+# Uso: python -m models.catboost.<train|benchmark|inference> [--config configs/catboost.yaml] [chave=valor ...]
+
+seed: 42
+output_dir: artifacts
+
+data:
+  path: data/train.csv     # .csv ou .parquet
+  target: target
+  drop: []                 # ex.: [id]
+  task: auto               # auto | classification | regression
+  demo: false              # true = dataset sintético (ignora path/target)
+
+# Sobrescrevem os padrões de models/catboost/model.py (chaves omitidas usam o padrão).
+params:
+  # CatBoost: https://catboost.ai/docs/en/references/training-parameters/
+  # Obs.: o número de árvores aqui é `iterations` (não `n_estimators`).
+  iterations: 500
+  learning_rate: 0.05
+  depth: 6
+  l2_leaf_reg: 3.0
+
+train:
+  test_size: 0.2           # 0 = treina com o dataset inteiro
+
+benchmark:
+  folds: 5
+  n_jobs: 1
+
+inference:
+  input: data/test.csv
+  output: predictions/catboost.csv
+  model: null              # null = último treino; ou artifacts/catboost/runs/<run_id>
+  proba: true
+  keep: []                 # colunas do input copiadas para a saída, ex.: [id]

@@ -4,3 +4,6 @@ __pycache__/
 artifacts/
 catboost_info/
 predictions/
+
+# Dados baixados (ex.: scripts/download_zarc.py)
+data/
