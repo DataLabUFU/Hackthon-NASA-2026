@@ -104,7 +104,8 @@ def test_relatorio_de_excluidas(cat):
     rel = relatorio_excluidas(cat)
     assert rel.height == cat.filter(~pl.col("exibivel")).height
     assert set(rel["motivo"].unique()) <= {
-        "nome repetido", "sem nome brasileiro e colheita indefinida", "sem nome brasileiro", "colheita indefinida"}
+        "erva daninha", "nome repetido", "sem nome brasileiro e colheita indefinida", "sem nome brasileiro",
+        "colheita indefinida"}
 
 
 def test_subespecie_herdada_tem_origem_grupo(cat):
@@ -142,3 +143,27 @@ def test_cultura_curada_mantem_id_limpo_mesmo_com_variantes(cat):
     assert arroz.height >= 2                                            # curada + subespécies herdadas
     assert arroz.filter("obrigatoria")["id_cultura"].to_list() == ["arroz"]
     assert all(i.startswith("arroz--") for i in arroz.filter(~pl.col("obrigatoria"))["id_cultura"].to_list())
+
+
+
+def test_daninhas_fora_da_exibicao_exceto_curadas(cat):
+    vis = culturas_exibiveis(cat)
+    assert vis.filter(pl.col("daninha") & ~pl.col("obrigatoria")).is_empty()
+    assert "Goiaba" in vis["nome_pt"].to_list()            # curada, mesmo marcada como daninha no ECOCROP
+
+
+
+def test_tipo_de_cultura():
+    from towers.data.culturas import TIPOS_CULTURA, carregar_culturas
+    cat = carregar_culturas(usar_gbif=False)
+    vis = culturas_exibiveis(cat)
+    assert set(vis["tipo_cultura"].unique()) <= set(TIPOS_CULTURA)
+    tipo = dict(vis.filter("obrigatoria").select("nome_pt", "tipo_cultura").iter_rows())
+    assert tipo["Soja"] == "graos" and tipo["Milho"] == "graos" and tipo["Algodão herbáceo"] == "graos"
+    assert tipo["Alface"] == "hortalicas" and tipo["Laranja"] == "frutas" and tipo["Mandioca"] == "raizes"
+    assert tipo["Café arábica"] == "industriais_perenes" and tipo["Aveia-preta"] == "forrageiras"
+    assert tipo["Eucalipto (grandis)"] == "silvicultura" and tipo["Manjericão"] == "aromaticas"
+    so_graos = culturas_exibiveis(cat, tipos=["graos"])
+    assert (so_graos["tipo_cultura"] == "graos").all() and so_graos.height < vis.height
+    with pytest.raises(ValueError):
+        culturas_exibiveis(cat, tipos=["joias"])

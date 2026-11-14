@@ -36,3 +36,12 @@ OBJETIVOS: dict[str, dict] = {
 }
 
 PISO_SCORE = 0.05        # um score 0 não anula o total (0,05 ^ peso ainda penaliza muito)
+
+# Peso da evidência: o score final é multiplicado por 1 − PESO_EVIDENCIA × (1 − evidência), com
+#   evidência = 0,7 × cobertura (torres com score / torres avaliadas)
+#             + 0,3 × qualidade dos parâmetros (média de: T2 com parâmetro específico da cultura = 1 / do grupo = 0,5;
+#                                               parâmetros climáticos do ECOCROP = 1 / aproximação = 0,5)
+# Com 0,1, o fator vai de 0,9 (pouca evidência) a 1,0 (completa): desempata a favor do mais verificado
+# sem enterrar culturas sem zoneamento. 0 desliga.
+PESO_EVIDENCIA = 0.10
+PESO_COBERTURA = 0.7

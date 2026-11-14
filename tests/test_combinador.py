@@ -28,7 +28,7 @@ def test_media_geometrica_ponderada_e_neutralidade():
                                                                     ciclo_dias=pl.lit(120))
     t4 = por_data("t4", [("a", D1, None)], "score_t4").with_columns(
         score_t4=pl.col("score_t4").cast(pl.Float64), zarc_status=pl.lit("sem_zoneamento"), risco_pct=pl.lit(None, pl.Int64))
-    r = combinar(t1, t2=t2, t4=t4).row(0, named=True)
+    r = combinar(t1, t2=t2, t4=t4, peso_evidencia=0).row(0, named=True)
     w = OBJETIVOS["equilibrado"]["pesos"]
     esperado = math.exp((w["t1"] * math.log(0.8) + w["t2"] * math.log(0.5)) / (w["t1"] + w["t2"]))  # T4 nulo = neutro
     assert r["score_final"] == pytest.approx(esperado) and r["torres_com_score"] == 2
@@ -37,7 +37,7 @@ def test_media_geometrica_ponderada_e_neutralidade():
 def test_zero_penaliza_sem_anular():
     t1 = t1_([("a", "A", D1, 1.0, 1.0, True)])
     t3 = pl.DataFrame({"id_cultura": ["a"], "score_t3": [0.0], "alertas_solo": [[]], "fator_limitante_solo": ["ph"]})
-    r = combinar(t1, t3=t3).row(0, named=True)
+    r = combinar(t1, t3=t3, peso_evidencia=0).row(0, named=True)
     w = OBJETIVOS["equilibrado"]["pesos"]
     assert r["score_final"] == pytest.approx(math.exp(w["t3"] * math.log(PISO_SCORE) / (w["t1"] + w["t3"])))
     assert 0 < r["score_final"] < 0.5
@@ -55,7 +55,7 @@ def test_somente_financiaveis_e_objetivo_conservador():
     assert not combinar(t1, t6=t6)["eliminada"].item()
     assert combinar(t1, t6=t6, somente_financiaveis=True)["eliminada"].item()
     assert combinar(t1, t6=t6, objetivo="financiamento")["eliminada"].item()        # padrão do objetivo
-    assert combinar(t1, objetivo="estabilidade")["score_final"].item() == pytest.approx(0.4)   # usa o P20
+    assert combinar(t1, objetivo="estabilidade", peso_evidencia=0)["score_final"].item() == pytest.approx(0.4)  # P20
     with pytest.raises(ValueError):
         combinar(t1, objetivo="lucro_maximo")
 
@@ -63,7 +63,7 @@ def test_somente_financiaveis_e_objetivo_conservador():
 def test_torre_extra_plugavel():
     t1 = t1_([("a", "A", D1, 1.0, 1.0, True)])
     extremos = pl.DataFrame({"id_cultura": ["a"], "plantio": [D1], "score_extremos": [0.5]})
-    r = combinar(t1, extras={"extremos": (extremos, 0.25)}).row(0, named=True)
+    r = combinar(t1, extras={"extremos": (extremos, 0.25)}, peso_evidencia=0).row(0, named=True)
     assert r["score_final"] == pytest.approx(math.exp(0.25 * math.log(0.5) / (0.25 + 0.25)))
 
 
@@ -117,3 +117,26 @@ def test_explicacao_pontos_fortes_e_fracos():
     t3 = pl.DataFrame({"id_cultura": ["a"], "score_t3": [0.3], "alertas_solo": [[]], "fator_limitante_solo": ["drenagem"]})
     r = ordenar(combinar(t1, t3=t3)).row(0, named=True)
     assert r["pontos_fortes"] == ["clima"] and r["pontos_fracos"] == ["solo"]
+
+
+
+# --- peso da evidência e tipo de cultura -------------------------------------------------------
+
+def test_fator_de_confianca_favorece_o_mais_verificado():
+    t1 = t1_([("capim", "Capim", D1, 0.95, 0.95, True), ("milho", "Milho", D1, 0.90, 0.90, True)])
+    t4 = pl.DataFrame({"id_cultura": ["capim", "milho"], "plantio": [D1, D1], "score_t4": [None, 1.0],
+                       "zarc_status": ["sem_zoneamento", "indicado"], "risco_pct": [None, 20]},
+                      schema_overrides={"score_t4": pl.Float64, "risco_pct": pl.Int64})
+    sem = ordenar(combinar(t1, t4=t4, peso_evidencia=0))
+    com = ordenar(combinar(t1, t4=t4))
+    assert sem["nome_pt"].to_list()[0] == "Capim"            # sem o fator, a falta do ZARC favorece o capim
+    assert com["nome_pt"].to_list()[0] == "Milho"            # com o fator, o mais verificado passa à frente
+    capim = com.filter(pl.col("nome_pt") == "Capim").row(0, named=True)
+    assert 0.9 <= capim["fator_confianca"] < 1.0
+    assert com.filter(pl.col("nome_pt") == "Milho")["fator_confianca"].item() == pytest.approx(1.0)
+
+
+def test_qualidade_dos_parametros_entra_na_evidencia():
+    t1 = t1_([("a", "A", D1, 1.0, 1.0, True)]).with_columns(fonte_parametros=pl.lit("Aproximação: copiado de X"))
+    r = combinar(t1).row(0, named=True)
+    assert r["fator_confianca"] < 1.0 and r["score_final"] < 1.0

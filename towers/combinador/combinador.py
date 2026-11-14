@@ -7,6 +7,8 @@
 - Eliminatório: ``gate_t1`` falso (clima inapto na maioria dos anos) → ``eliminada``.
 - ``somente_financiaveis``: candidatos não financiáveis (T6) também são eliminados.
 - Objetivo "estabilidade": T1 usa o P20 (pior ano típico) e T2 usa 1 − P(perda > 20%).
+- Peso da evidência (``peso_evidencia``, padrão 0,1): o score é multiplicado por um fator de 0,9 a 1,0
+  conforme a cobertura de torres e a qualidade dos parâmetros (ver ``pesos.py``).
 
 Entradas: as saídas das torres sem colapsar variantes. T1, T2, T4 e T6 são por (id_cultura, plantio);
 T3 e T5 são por id_cultura. ``extras`` permite plugar outras torres (ex.: a de extremos de temperatura):
@@ -16,13 +18,14 @@ from __future__ import annotations
 
 import polars as pl
 
-from .pesos import OBJETIVOS, PISO_SCORE
+from .pesos import OBJETIVOS, PESO_COBERTURA, PESO_EVIDENCIA, PISO_SCORE
 
 
 def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame | None = None,
              t4: pl.DataFrame | None = None, t5: pl.DataFrame | None = None, t6: pl.DataFrame | None = None,
              objetivo: str = "equilibrado", somente_financiaveis: bool | None = None,
-             extras: dict[str, tuple[pl.DataFrame, float]] | None = None) -> pl.DataFrame:
+             extras: dict[str, tuple[pl.DataFrame, float]] | None = None,
+             peso_evidencia: float = PESO_EVIDENCIA) -> pl.DataFrame:
     if objetivo not in OBJETIVOS:
         raise ValueError(f"objetivo desconhecido: {objetivo!r} (válidos: {sorted(OBJETIVOS)})")
     cfg = OBJETIVOS[objetivo]
@@ -35,11 +38,13 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
     df = t1.select(
         *chave, "nome_pt", "uso", "modo", "colheita", "obrigatoria", "escala_cultivo", "gate_t1", "fator_limitante",
         "ciclo_dias", "alerta_foto_mensagem", "alerta_ciclo_extremo",
+        *[c for c in ("fonte_parametros", "tipo_cultura") if c in t1.columns],
         s_t1=pl.col("apt_p20") if conservador else pl.col("score_t1"),
     )
     if t2 is not None:
         df = df.join(t2.select(*chave, s_t2=(1 - pl.col("prob_perda20")) if conservador else pl.col("score_t2"),
-                               irrigacao_mm=pl.col("irrigacao_mm_med"), ciclo_t2=pl.col("ciclo_dias")),
+                               irrigacao_mm=pl.col("irrigacao_mm_med"), ciclo_t2=pl.col("ciclo_dias"),
+                               *[c for c in ("parametros_t2_origem",) if c in t2.columns]),
                      on=chave, how="left")
     if t3 is not None:
         df = df.join(t3.select("id_cultura", s_t3=pl.col("score_t3"), alertas_solo=pl.col("alertas_solo"),
@@ -72,6 +77,19 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
         torres_com_score=pl.sum_horizontal(*[pl.col(f"s_{t}").is_not_null().cast(pl.Int8) for t in presentes]),
         torres_avaliadas=pl.lit(len(presentes), pl.Int8),
     )
+    # peso da evidência: cobertura de torres + qualidade dos parâmetros
+    qualidades = []
+    if "parametros_t2_origem" in df.columns:
+        qualidades.append(pl.when(pl.col("parametros_t2_origem") == "cultura").then(1.0).otherwise(0.5))
+    if "fonte_parametros" in df.columns:
+        qualidades.append(pl.when(pl.col("fonte_parametros") == "ECOCROP (FAO)").then(1.0).otherwise(0.5))
+    qualidade = pl.mean_horizontal(*qualidades) if qualidades else pl.lit(1.0)
+    df = df.with_columns(
+        evidencia=PESO_COBERTURA * pl.col("torres_com_score") / pl.col("torres_avaliadas")
+        + (1 - PESO_COBERTURA) * qualidade,
+    ).with_columns(
+        fator_confianca=1 - peso_evidencia * (1 - pl.col("evidencia")),
+    ).with_columns(score_combinado=pl.col("score_combinado") * pl.col("fator_confianca"))
 
     eliminada = ~pl.col("gate_t1")
     motivo = pl.when(~pl.col("gate_t1")).then(pl.concat_str(pl.lit("clima inapto (T1: "), pl.col("fator_limitante"), pl.lit(")")))

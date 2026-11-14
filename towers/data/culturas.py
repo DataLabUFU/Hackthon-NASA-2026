@@ -12,8 +12,10 @@ Camadas de informação, da mais confiável para a menos:
    com a fonte de cada valor (ou a espécie usada como aproximação).
 3. Demais espécies do ECOCROP com nome popular brasileiro no GBIF (Flora e Funga do Brasil).
 
-Regra de exibição (o usuário final nunca vê nome científico nem nome vazio):
-``exibivel = nome_pt definido e colheita ∈ {reprodutiva, vegetativa}``.
+Regra de exibição (o usuário final nunca vê nome científico nem nome vazio, nem ervas daninhas):
+``exibivel = nome_pt definido e colheita ∈ {reprodutiva, vegetativa} e não (daninha e não curada)``.
+Daninha = o ECOCROP marca "weed" na categoria. Culturas curadas que também podem ser daninhas
+(ex.: goiaba, crotalária) continuam exibidas.
 """
 from __future__ import annotations
 
@@ -33,6 +35,42 @@ CAMINHO_EXTRA = AQUI / "culturas_extra.csv"
 
 PARAMS_EXTRA = ["TMIN", "TOPMN", "TOPMX", "TMAX", "KTMP", "RMIN", "ROPMN", "ROPMX", "RMAX", "GMIN", "GMAX"]
 COLHEITAS_VALIDAS = ("reprodutiva", "vegetativa")
+
+# Tipo de cultura (filtro da interface): o produtor escolhe o que considera plantar.
+TIPOS_CULTURA = {
+    "graos": "Grãos, oleaginosas e fibras",
+    "hortalicas": "Hortaliças",
+    "frutas": "Frutas",
+    "raizes": "Raízes e tubérculos",
+    "forrageiras": "Forrageiras e plantas de cobertura",
+    "industriais_perenes": "Perenes industriais (café, cana, chá, erva-mate...)",
+    "aromaticas": "Aromáticas e medicinais",
+    "silvicultura": "Silvicultura",
+    "outras": "Outras",
+}
+_TIPO_POR_GRUPO_FAO = {
+    "cereais": "graos", "leguminosas_grao": "graos", "oleaginosas_fibras": "graos",
+    "hortalicas_folhosas": "hortalicas", "hortalicas_fruto": "hortalicas", "raizes_tuberculos": "raizes",
+    "forrageiras": "forrageiras", "frutiferas_perenes": "frutas", "perenes_outras": "industriais_perenes",
+    "silvicultura": "silvicultura", "outras_anuais": "outras",
+}
+_TIPO_POR_FONTE_CURADA = {
+    "curadoria: hortaliça": "hortalicas", "curadoria: fruta": "frutas", "curadoria: cobertura/forrageira": "forrageiras",
+    "curadoria: aromática/medicinal": "aromaticas", "curadoria: silvicultura": "silvicultura",
+}
+_TIPO_MANUAL = {   # culturas da PAM cujo grupo pela categoria do ECOCROP não representa o uso no Brasil
+    "algodao-herbaceo": "graos", "algodao-arboreo": "graos", "amendoim": "graos", "gergelim": "graos",
+    "girassol": "graos", "mamona": "graos", "canola": "graos", "linhaca": "graos",
+    "cana-de-acucar": "industriais_perenes", "cafe-arabica": "industriais_perenes",
+    "cafe-conilon-canefora": "industriais_perenes", "cha-da-india": "industriais_perenes",
+    "erva-mate": "industriais_perenes", "fumo": "industriais_perenes", "seringueira": "industriais_perenes",
+    "sisal": "industriais_perenes", "juta": "industriais_perenes", "malva-fibra": "industriais_perenes",
+    "rami": "industriais_perenes", "urucum": "industriais_perenes", "dende": "industriais_perenes",
+    "guarana": "industriais_perenes", "pimenta-do-reino": "industriais_perenes", "cacau": "frutas",
+    "mandioca": "raizes", "batata-doce": "raizes", "batata": "raizes", "inhame": "raizes", "taro": "raizes",
+    "alfafa": "forrageiras", "sorgo-forrageiro": "forrageiras", "milho-doce": "hortalicas",
+    "melancia": "frutas", "melao": "frutas", "morango": "frutas", "azeitona-oliveira": "frutas",
+}
 
 
 def ler_obrigatorias(caminho: Path | str = CAMINHO_OBRIGATORIAS) -> pl.DataFrame:
@@ -141,7 +179,10 @@ def carregar_culturas(usar_gbif: bool = True, cache_gbif: Path | str = CACHE_GBI
     resto = _resolver_conflitos_de_nome(resto, set(curadas["nome_pt"].to_list()))
 
     df = pl.concat([curadas, resto], how="diagonal_relaxed").with_columns(
-        exibivel=pl.col("nome_pt").is_not_null() & pl.col("colheita").is_in(COLHEITAS_VALIDAS),
+        daninha=pl.col("CAT").fill_null("").str.contains("weed", literal=True),
+    ).with_columns(
+        exibivel=pl.col("nome_pt").is_not_null() & pl.col("colheita").is_in(COLHEITAS_VALIDAS)
+        & ~(pl.col("daninha") & ~pl.col("obrigatoria")),
         # desempate no ranking: 0 = cultivada em larga escala (ou curada), 1 = pequena escala, 2 = demais
         escala_cultivo=pl.when(pl.col("obrigatoria") | pl.col("PLAT").fill_null("").str.contains("large scale")).then(0)
         .when(pl.col("PLAT").fill_null("").str.contains("small scale")).then(1).otherwise(2).cast(pl.Int8),
@@ -159,6 +200,14 @@ def carregar_culturas(usar_gbif: bool = True, cache_gbif: Path | str = CACHE_GBI
         for b, c, e in zip(base, curada, df["especie"].to_list())
     ]
     df = df.with_columns(id_cultura=pl.Series(ids)).select("id_cultura", pl.exclude("id_cultura"))
+
+    # tipo de cultura: manual > fonte da curadoria > grupo FAO (categoria do ECOCROP)
+    from .fao56 import grupo_fao
+    df = df.with_columns(_grupo=grupo_fao(df)).with_columns(
+        tipo_cultura=pl.col("id_cultura").replace_strict(_TIPO_MANUAL, default=None)
+        .fill_null(pl.col("fonte_inclusao").replace_strict(_TIPO_POR_FONTE_CURADA, default=None))
+        .fill_null(pl.col("_grupo").replace_strict(_TIPO_POR_GRUPO_FAO, default="outras")),
+    ).drop("_grupo")
 
     log.info(
         "Culturas: %d no catálogo, %d exibíveis (%d obrigatórias, %d com nome do GBIF, %d herdados do grupo)",
@@ -208,11 +257,19 @@ def _resolver_conflitos_de_nome(resto: pl.DataFrame, nomes_curados: set[str]) ->
     ).drop("_i", "_prio")
 
 
-def culturas_exibiveis(df: pl.DataFrame, incluir_silvicultura: bool = True) -> pl.DataFrame:
-    """Culturas que podem aparecer para o usuário. Silvicultura ligada por padrão (filtro para desligar)."""
+def culturas_exibiveis(df: pl.DataFrame, incluir_silvicultura: bool = True,
+                       tipos: list[str] | tuple[str, ...] | None = None) -> pl.DataFrame:
+    """Culturas que podem aparecer para o usuário. Silvicultura ligada por padrão (filtro para desligar).
+
+    ``tipos``: filtra pelos tipos de cultura escolhidos pelo produtor (chaves de ``TIPOS_CULTURA``).
+    """
     out = df.filter("exibivel")
     if not incluir_silvicultura:
         out = out.filter(pl.col("uso") != "silvicultura")
+    if tipos:
+        if invalidos := set(tipos) - set(TIPOS_CULTURA):
+            raise ValueError(f"tipos de cultura desconhecidos: {sorted(invalidos)} (válidos: {sorted(TIPOS_CULTURA)})")
+        out = out.filter(pl.col("tipo_cultura").is_in(list(tipos)))
     return out
 
 
@@ -220,7 +277,8 @@ def relatorio_excluidas(df: pl.DataFrame) -> pl.DataFrame:
     """Espécies fora da exibição e o motivo (para a equipe revisar e promover à lista obrigatória)."""
     return df.filter(~pl.col("exibivel")).select(
         "especie", "CAT", "PLAT",
-        motivo=pl.when(pl.col("conflito_nome").fill_null(False)).then(pl.lit("nome repetido"))
+        motivo=pl.when(pl.col("daninha") & ~pl.col("obrigatoria")).then(pl.lit("erva daninha"))
+        .when(pl.col("conflito_nome").fill_null(False)).then(pl.lit("nome repetido"))
         .when(pl.col("nome_pt").is_null() & ~pl.col("colheita").is_in(COLHEITAS_VALIDAS))
         .then(pl.lit("sem nome brasileiro e colheita indefinida"))
         .when(pl.col("nome_pt").is_null()).then(pl.lit("sem nome brasileiro"))

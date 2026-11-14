@@ -47,6 +47,7 @@ COLUNAS_CULTURA = [
     "id_cultura", "nome_pt", "uso", "modo", "colheita", "obrigatoria", "escala_cultivo",
     "ciclo_conhecido", "chuva_conhecida", "ktmp_origem", "foto_conhecido", "fonte_parametros",
 ]
+COLUNAS_OPCIONAIS = ["tipo_cultura"]
 
 
 def avaliar_t1(lat: float, lon: float, data_plantio: date,
@@ -94,7 +95,8 @@ def avaliar_t1(lat: float, lon: float, data_plantio: date,
     res = melhor_ciclo(agg, ciclos)
 
     # 6) metadados da cultura, gate, fator limitante
-    res = res.join(culturas.select(*COLUNAS_CULTURA, "foto_sensivel", "foto_curto", "foto_neutro", "foto_longo"),
+    extras_cult = [c for c in COLUNAS_OPCIONAIS if c in culturas.columns]
+    res = res.join(culturas.select(*COLUNAS_CULTURA, *extras_cult, "foto_sensivel", "foto_curto", "foto_neutro", "foto_longo"),
                    on="id_cultura", how="left").with_columns(
         score_t1=pl.col("apt_media"),
         gate_t1=pl.col("prob_apta") >= LIMIAR_APTA,
@@ -139,7 +141,7 @@ def avaliar_t1(lat: float, lon: float, data_plantio: date,
         "alerta_foto", "alerta_foto_tipo", "alerta_foto_mensagem", "dia_fase_indutiva_h", "alerta_ciclo_extremo",
         "indicada_zarc", "n_variantes", "n_anos", "n_anos_efetivos",
         "obrigatoria", "escala_cultivo", "ciclo_conhecido", "chuva_conhecida", "ktmp_origem", "foto_conhecido",
-        "fonte_parametros",
+        "fonte_parametros", *extras_cult,
     ]
     res = res.select(ordem).sort(**ordenar)
     log.info("T1: %d candidatos (%d culturas × %d datas), %d passam no gate",
