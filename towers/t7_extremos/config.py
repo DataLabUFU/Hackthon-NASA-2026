@@ -1,12 +1,16 @@
-"""Configuração da Torre 7: limiares e parâmetros, em YAML carregado com OmegaConf + schema.
+"""Configuração da Torre 7: limiares e parâmetros lidos de ``configs/extremos.yaml``.
+
+As classes abaixo descrevem quais campos o YAML pode ter, com seus tipos e valores padrão
+(é o "schema"). O OmegaConf junta o schema com o YAML e acusa erro se aparecer um campo
+desconhecido ou de tipo errado, o que pega erros de digitação cedo.
 
 Cada limiar registra valor, unidade, fonte, data de vigência e status:
 
-- ``PROVISORIO``: ainda não definido pelo agro (ou só ponto de partida da análise).
+- ``PROVISORIO``: valor de trabalho, ainda não confirmado pela equipe de agronomia;
 - ``DEFINIDO``: valor fechado, com fonte.
 
-Valor ``null`` significa "pendente": as funções que precisam do limiar recusam rodar sem ele,
-em vez de inventar um número.
+Valor ``null`` significa "ainda não escolhido": as funções que precisam do limiar param com
+uma mensagem clara, em vez de usar um número qualquer.
 """
 from __future__ import annotations
 

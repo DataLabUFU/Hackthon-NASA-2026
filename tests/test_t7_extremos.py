@@ -1,8 +1,8 @@
-"""Testes da Torre 7 com trechos REAIS do dados_unificados.csv (nenhum dado inventado).
+"""Testes da Torre 7 com trechos reais do dados_unificados.csv (nenhum dado inventado).
 
 O CSV fica em data/raw/power/ (fora do git). Sem ele, os testes que precisam de dados são
-pulados, como os testes da T1 sem o EcoCrop_DB.csv. Os valores esperados são recalculados à
-parte, direto das colunas brutas do arquivo.
+pulados. Sempre que possível, o valor esperado é recalculado à parte, direto das colunas
+brutas do arquivo, para não testar o código contra ele mesmo.
 """
 from pathlib import Path
 

@@ -1,45 +1,48 @@
 # Torre 7: probabilidade de extremos climáticos.
-# Schema e validação em towers/t7_extremos/config.py.
+# O formato e as regras de validação estão em towers/t7_extremos/config.py.
 #
-# status: PROVISORIO (ainda não definido pelo agro) | DEFINIDO (valor fechado, com fonte)
-# valor null = pendente: o cálculo recusa rodar sem ele (nada de número inventado).
+# Cada limiar tem um status:
+#   PROVISORIO = valor de trabalho, ainda não confirmado pela equipe de agronomia
+#   DEFINIDO   = valor fechado, com fonte
+# valor: null quer dizer "ainda não escolhido": o cálculo para com uma mensagem, em vez de
+# usar um número qualquer.
 
 referencia:
   arquivo: data/raw/power/dados_unificados.csv
   ano_inicio: 2000
-  ano_fim: 2021            # 2022+ é período do ML: nunca entra em limiares nem probabilidades
-  fonte_dados: "NASA POWER diário (MERRA-2, grade 0,5° x 0,625°), PRECTOTCORR/T2M/T2M_MAX/T2M_MIN/RH2M/WS2M; pontos P01–P20 (coordenadas pendentes)"
-  data_download: null      # PENDENTE: data em que os dados foram baixados da POWER
+  ano_fim: 2021            # 2022 em diante fica para o time de ML testar as previsões
+  fonte_dados: "NASA POWER diário (reanálise MERRA-2, grade 0,5° x 0,625°): PRECTOTCORR, T2M, T2M_MAX, T2M_MIN, RH2M, WS2M; pontos P01–P20 (coordenadas a obter)"
+  data_download: null      # data em que os dados foram baixados da NASA POWER (a obter)
 
-bootstrap:
-  repeticoes: 1000         # sorteio de anos com reposição (nunca de dias)
-  semente: 42
+bootstrap:                 # intervalo de confiança: sorteio de anos inteiros, com reposição
+  repeticoes: 1000
+  semente: 42              # fixa o sorteio, para os resultados serem sempre os mesmos
   nivel_ic: 0.95
 
 limiares:
-  chuva_extrema:
-    valor: null            # PENDENTE (§8.1): mm em 3 dias, valor físico do agro ou percentil de referência 2000–2021
+  chuva_extrema:           # chuva acumulada em poucos dias acima de um valor
+    valor: null            # a definir: mm em 3 dias
     unidade: mm
     janela_dias: 3
-    fonte: "pendente"
+    fonte: "a definir (valor agronômico ou percentil da referência 2000–2021)"
     vigencia: null
     status: PROVISORIO
-    grade_sensibilidade: []   # valores para a análise de sensibilidade (a definir)
+    grade_sensibilidade: []   # valores testados na análise de sensibilidade
 
-  queda_temperatura:
-    valor: null            # PENDENTE (§8.1): briefing §3.2 sugere 4 a 5 °C como ponto de partida
+  queda_temperatura:       # queda da temperatura média em poucos dias
+    valor: null            # a definir: análise preliminar sugere entre 4 e 5 °C
     unidade: °C
     janela_dias: 2
-    absoluto: false        # PENDENTE (§8.6): false = só resfriamento
-    fonte: "briefing §3.2: ponto de partida 4–5 °C, de um único ponto de teste (2000–2021); valor final é agronômico"
+    absoluto: false        # false = só esfriamento; true = também aquecimento brusco
+    fonte: "análise preliminar em um único ponto (lat −18,92; lon −48,27; safras out–mar de 2000–2021); valor final é agronômico"
     vigencia: null
     status: PROVISORIO
-    grade_sensibilidade: [3.0, 4.0, 5.0, 6.0]   # a mesma grade testada no briefing §3.2
+    grade_sensibilidade: [3.0, 4.0, 5.0, 6.0]
 
-  estiagem:
-    n_dias: 10             # briefing §3.3: ponto de partida
+  estiagem:                # indicador informativo de tempo seco (amplitude térmica)
+    n_dias: 10             # média dos últimos 10 dias (valor de partida)
     n_dias_status: PROVISORIO
-    limiar_amplitude_alta: null   # PENDENTE: anomalia (°C) que define "amplitude alta"
+    limiar_amplitude_alta: null   # a definir: anomalia (°C) a partir da qual o dia tem "amplitude alta"
     limiar_amplitude_alta_status: PROVISORIO
-    janela_climatologia_dias: 31  # briefing §3.3: média por dia do ano, suavizada em janela circular de 31 dias
-    fonte: "briefing §3.3"
+    janela_climatologia_dias: 31  # o "normal" de cada dia é a média de 31 dias em volta dele
+    fonte: "análise preliminar em um único ponto (2000–2021)"
