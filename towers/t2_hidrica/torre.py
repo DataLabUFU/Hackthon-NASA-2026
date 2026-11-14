@@ -56,6 +56,10 @@ LIMIAR_ISNA = 0.50
 AD_PADRAO = {"ad_mm_cm": 1.10, "classe_ad": "AD 4 (1,10)", "origem": "padrao"}   # classe mais comum
 DIAS_ANO = 365
 FAIXA_DURACAO_FAO = (0.7, 1.3)
+# Teto da profundidade efetiva de raiz (m) no cálculo da água disponível. None = raiz máxima da FAO-56.
+# Calibrado contra o ZARC (validacao.py, 42 municípios): T1∧T2 = 0,708 com 0,4 m (= 0,6 m) contra 0,701 sem teto;
+# T2 sozinha 0,605 contra 0,589. 0,4 m é também a profundidade efetiva usada pelo próprio ZARC.
+RAIZ_MAX_PADRAO: float | None = 0.4
 
 
 # --- clima com ET0 -----------------------------------------------------------------------------
@@ -213,6 +217,7 @@ def avaliar_t2(lat: float, lon: float, data_plantio: date,
                deslocamentos: Iterable[int] = DESLOCAMENTOS_PADRAO,
                culturas: pl.DataFrame | None = None, clima: pl.DataFrame | None = None,
                solo: dict | None = None, irrigado: bool = False, estado_inicial: str = "atual",
+               raiz_max_m: float | None = RAIZ_MAX_PADRAO,
                meia_vida: float = MEIA_VIDA_PADRAO, ano_referencia: int | None = None,
                incluir_silvicultura: bool = True, colapsar_variantes: bool = True) -> pl.DataFrame:
     """Score da T2 (água) para todas as culturas exibíveis × datas candidatas, ordenado."""
@@ -233,6 +238,8 @@ def avaliar_t2(lat: float, lon: float, data_plantio: date,
 
     # candidatos: ciclos da grade (safra) + 365 dias (perenes), com parâmetros FAO-56
     par = parametros_t2(culturas)
+    if raiz_max_m is not None:
+        par = par.with_columns(raiz_m=pl.col("raiz_m").clip(upper_bound=raiz_max_m))
     safra = restringir_ciclos(expandir_ciclos(par, chave="id_cultura"))
     perenes = par.filter(pl.col("modo") == "implantacao").with_columns(
         ciclo_dias=pl.lit(DIAS_ANO, pl.Int64), ciclo_tipico=pl.lit(True), ciclo_referencia=pl.lit(True))
