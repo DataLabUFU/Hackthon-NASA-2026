@@ -1,0 +1,51 @@
+chave,kc_ini,kc_mid,kc_end,frac_ini,frac_dev,frac_mid,frac_late,raiz_m,p,ky,fonte,duracao_fao
+grupo:cereais,0.3,1.15,0.35,0.15,0.25,0.4,0.2,1.2,0.55,1.05,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:leguminosas_grao,0.4,1.15,0.45,0.17,0.27,0.38,0.18,0.8,0.45,0.95,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:oleaginosas_fibras,0.35,1.15,0.5,0.17,0.27,0.33,0.23,1.2,0.55,0.9,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:raizes_tuberculos,0.5,1.1,0.6,0.15,0.22,0.4,0.23,0.6,0.35,1.1,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:hortalicas_folhosas,0.7,1.03,0.95,0.25,0.37,0.27,0.11,0.5,0.4,1.0,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:hortalicas_fruto,0.6,1.1,0.8,0.2,0.29,0.32,0.19,0.9,0.4,1.05,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:forrageiras,0.5,1.0,0.9,0.1,0.2,0.5,0.2,1.0,0.55,1.0,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:frutiferas_perenes,0.7,0.9,0.8,0.1,0.1,0.6,0.2,1.3,0.5,1.1,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:perenes_outras,0.6,0.9,0.8,0.1,0.1,0.6,0.2,1.5,0.55,1.0,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:silvicultura,0.8,1.0,1.0,0.1,0.1,0.6,0.2,2.0,0.7,1.0,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+grupo:outras_anuais,0.4,1.05,0.6,0.17,0.27,0.36,0.2,0.8,0.5,1.0,"valor típico do grupo a partir de FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p) e FAO-33 (Ky)",
+soja,0.4,1.15,0.5,0.143,0.25,0.429,0.178,1.0,0.5,0.85,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",140
+milho,0.3,1.2,0.6,0.2,0.267,0.333,0.2,1.2,0.55,1.25,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",150
+milho-doce,0.3,1.15,1.05,0.25,0.312,0.312,0.126,1.0,0.5,1.25,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",80
+trigo,0.3,1.15,0.3,0.148,0.185,0.444,0.223,1.2,0.55,1.15,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",135
+cevada,0.3,1.15,0.25,0.125,0.208,0.417,0.25,1.2,0.55,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
+aveia-branca,0.3,1.15,0.25,0.125,0.208,0.417,0.25,1.2,0.55,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
+aveia-preta,0.3,1.15,0.25,0.125,0.208,0.417,0.25,1.2,0.55,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
+arroz--oryza-sativa,1.05,1.2,0.75,0.2,0.2,0.4,0.2,0.7,0.2,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",150
+sorgo-granifero,0.3,1.05,0.55,0.16,0.28,0.32,0.24,1.4,0.55,0.9,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",125
+sorgo-forrageiro,0.3,1.05,0.55,0.16,0.28,0.32,0.24,1.4,0.55,0.9,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",125
+girassol,0.35,1.1,0.35,0.192,0.269,0.346,0.193,1.2,0.45,0.95,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",130
+algodao-herbaceo,0.35,1.18,0.6,0.154,0.256,0.308,0.282,1.3,0.65,0.85,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",195
+amendoim,0.4,1.15,0.6,0.192,0.269,0.346,0.193,0.8,0.5,0.7,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",130
+feijao,0.4,1.15,0.35,0.182,0.273,0.364,0.181,0.7,0.45,1.15,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",110
+feijao-caupi--vigna-unguiculata,0.4,1.05,0.5,0.182,0.273,0.364,0.181,0.8,0.45,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",110
+vagem,0.5,1.05,0.9,0.222,0.333,0.333,0.112,0.6,0.45,1.15,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",90
+ervilha,0.5,1.15,0.3,0.167,0.278,0.389,0.166,0.8,0.35,1.15,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",90
+batata,0.5,1.15,0.75,0.192,0.231,0.346,0.231,0.5,0.35,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",130
+mandioca,0.3,0.8,0.3,0.095,0.19,0.429,0.286,0.7,0.35,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",210
+batata-doce,0.5,1.15,0.65,0.133,0.2,0.4,0.267,1.2,0.65,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",150
+cana-de-acucar,0.4,1.25,0.75,0.104,0.146,0.458,0.292,1.5,0.65,1.2,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+tomate,0.6,1.15,0.8,0.222,0.296,0.296,0.186,1.0,0.4,1.05,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",135
+pimentao,0.6,1.05,0.9,0.208,0.292,0.333,0.167,0.75,0.3,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",120
+cebola,0.7,1.05,0.75,0.1,0.167,0.467,0.266,0.45,0.3,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",150
+repolho,0.7,1.05,0.95,0.242,0.364,0.303,0.091,0.65,0.45,0.95,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",165
+alface,0.7,1.0,0.95,0.267,0.4,0.2,0.133,0.4,0.3,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",75
+cenoura,0.7,1.05,0.95,0.167,0.25,0.417,0.166,0.75,0.35,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
+melancia,0.4,1.0,0.75,0.182,0.273,0.273,0.272,1.1,0.4,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",110
+melao,0.5,1.05,0.75,0.208,0.292,0.333,0.167,1.1,0.4,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
+banana,1.0,1.2,1.1,0.1,0.1,0.6,0.2,0.7,0.35,1.25,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+laranja,0.7,0.65,0.7,0.1,0.1,0.6,0.2,1.3,0.5,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+tangerina,0.7,0.65,0.7,0.1,0.1,0.6,0.2,1.3,0.5,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+limao,0.7,0.65,0.7,0.1,0.1,0.6,0.2,1.3,0.5,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+cafe-arabica,0.9,0.95,0.95,0.1,0.1,0.6,0.2,1.2,0.4,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",
+cafe-conilon-canefora,0.9,0.95,0.95,0.1,0.1,0.6,0.2,1.2,0.4,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",
+uva,0.3,0.85,0.45,0.1,0.1,0.6,0.2,1.5,0.35,0.85,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+abacaxi,0.5,0.3,0.3,0.1,0.1,0.6,0.2,0.45,0.5,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",
+canola,0.35,1.1,0.35,0.172,0.241,0.379,0.208,1.2,0.6,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",145
+alfafa,0.4,0.95,0.9,0.1,0.2,0.5,0.2,1.2,0.55,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",

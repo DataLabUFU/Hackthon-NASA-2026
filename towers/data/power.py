@@ -53,7 +53,7 @@ PARAMS_CHUVA = frozenset({CHUVA, CHUVA_DIAGNOSTICO})
 
 # Parâmetros por torre (a T2 acrescenta os seus ao chamar com params=...).
 PARAMS_T1 = ("T2M", "T2M_MIN", "T2M_MAX", CHUVA, CHUVA_DIAGNOSTICO)
-PARAMS_T2 = PARAMS_T1 + ("GWETROOT", "ALLSKY_SFC_SW_DWN", "RH2M", "WS2M")
+PARAMS_T2 = PARAMS_T1 + ("GWETROOT", "ALLSKY_SFC_SW_DWN", "RH2M", "WS2M", "PS")
 
 VALOR_AUSENTE = -999.0
 
