@@ -143,19 +143,29 @@ Considera:
 - Potencial de cobertura e recuperação do solo;
 - Demanda hídrica e complementaridade entre culturas.
 
-#### 6. Torre de Elegibilidade e Extremos
-
-Avalia restrições regulatórias, operacionais e riscos extremos que podem comprometer a recomendação.
+#### 6. Torre de Elegibilidade e Restrições
+Avalia as condições regulatórias, financeiras e operacionais que determinam a viabilidade de implantação e continuidade do projeto.
 
 Considera:
 
 - Elegibilidade para crédito rural;
-- Condições para contratação de seguro agrícola;
-- Restrições de zoneamento;
+- Condições e requisitos para contratação de seguro agrícola;
+- Restrições regulatórias e ambientais;
+- Enquadramento nas normas de zoneamento agrícola (ZARC);
+- Restrições operacionais que possam comprometer a implantação ou a produção.
+
+#### 7. Torre de Extremos Climáticos
+Avalia a exposição da atividade agrícola a eventos climáticos extremos e seus potenciais impactos sobre a produtividade, a qualidade da produção e a viabilidade econômica do projeto.
+
+Considera:
+
 - Risco de geadas;
-- Chuvas extremas;
-- Ondas de calor;
-- Outros eventos climáticos relevantes.
+- Chuvas extremas e excesso hídrico;
+- Períodos prolongados de estiagem;
+- Ondas de calor e temperaturas extremas;
+- Ventos fortes, granizo e tempestades;
+- Inundações e alagamentos;
+- Eventos climáticos severos e recorrentes;
 
 Cada torre realiza sua análise de maneira independente, permitindo que o sistema identifique os fatores que favorecem ou prejudicam cada alternativa de plantio.
 
