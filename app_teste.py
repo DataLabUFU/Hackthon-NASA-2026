@@ -1,7 +1,10 @@
-"""AgroData: interface Streamlit (convertida do HTML). A lógica fica em motor.py.
+# -*- coding: utf-8 -*-
+"""RotaSafra: interface Streamlit. A lógica fica em motor.py.
 
 Rodar:  pip install -r requirements.txt,  python scripts/preparar_dados.py  e  streamlit run app_teste.py
 O modelo real (seis torres em towers/) é o padrão quando os dados existem; force com MOTOR_RECOMENDACAO=mock|modelo.
+
+Este arquivo é autossuficiente no visual: não depende de .streamlit/config.toml.
 """
 from datetime import date
 from html import escape
@@ -11,52 +14,270 @@ import streamlit as st
 
 import motor as mt
 
-st.set_page_config(page_title="AgroData | Rotação de Culturas", layout="wide")
+try:                                    # usado só para marcar a página como pt-BR
+    import streamlit.components.v1 as components
+except Exception:                       # pragma: no cover
+    components = None
+
+NOME, NOME_DESTAQUE = "Rota", "Safra"
+SLOGAN = "Rotação inteligente para a próxima safra"
+
+st.set_page_config(page_title=f"{NOME}{NOME_DESTAQUE} | Rotação de Culturas", page_icon="🌱",
+                   layout="wide", initial_sidebar_state="collapsed")
 
 CSS = """<style>
-:root{--verde-escuro:#23452f;--verde:#477b43;--verde-claro:#e4efdf;--amarelo:#e9bd45}
-.stApp{background:#f3f5ed}
-.block-container{max-width:1250px;padding-top:1.5rem;padding-bottom:2rem}
-#MainMenu,footer{visibility:hidden}
-.topo{background:var(--verde-escuro);color:#fff;padding:25px 30px;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}
-.logo{font-size:25px;font-weight:bold}.logo span{color:var(--amarelo)}
-.topo p{font-size:13px;color:#d7e2d3;margin:5px 0 0}
-.header-tag{background:#355b3b;padding:10px 16px;border-radius:20px;font-size:13px;white-space:nowrap}
-.pagina-titulo{font-size:28px;font-weight:bold;color:var(--verde-escuro);margin-bottom:8px}
-.pagina-sub{color:#718071;font-size:14px;margin-bottom:20px}
-.secao-titulo{font-size:19px;font-weight:bold;color:var(--verde-escuro);margin:18px 0 14px;padding-bottom:10px;border-bottom:1px solid #e5e9df}
-[data-testid="stWidgetLabel"] p{font-weight:bold;font-size:13px;color:#405342}
-div[data-testid="stVerticalBlockBorderWrapper"]{background:#fff;border-radius:12px}
-.stButton>button{width:100%;padding:.8rem;font-weight:bold}
-.resultado-titulo{font-size:23px;font-weight:bold;color:var(--verde-escuro);margin:35px 0 7px}
-.resultado-resumo{font-size:13px;color:#778477;line-height:1.6;margin-bottom:25px}
-.grupo-titulo{padding:16px;border-radius:9px;font-size:15px;font-weight:bold;text-align:center;margin-bottom:15px}
-.grupo-verde{background:#e2f1e3;color:#35743d;border:1px solid #c7e3c9}
-.grupo-amarelo{background:#fff3d2;color:#9c751c;border:1px solid #f0dfad}
-.grupo-vermelho{background:#f9e5e3;color:#a8433c;border:1px solid #edc9c5}
-.card{background:#fff;border-radius:11px;border-top:4px solid;box-shadow:0 3px 12px rgba(0,0,0,.04);margin-bottom:15px;overflow:hidden}
+:root{--verde-escuro:#23452f;--verde:#477b43;--verde-claro:#e4efdf;--amarelo:#e9bd45;--marrom:#8a5a33;--marrom-escuro:#6f4627;
+--bege:#efe6d3;--bege-claro:#f7f1e3;--bege-borda:#d8c9a8;--fundo:#f6f1e5;--texto:#283b2b}
+html, body, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"] {
+    background: var(--fundo) !important;
+    color: var(--texto);
+    color-scheme: light !important;
+    min-height: 100vh;
+}
+
+*, *::before, *::after {
+    color-scheme: light;
+}[data-testid="stHeader"],[data-testid="stToolbar"],[data-testid="stDecoration"],#MainMenu,footer{display:none!important}
+.block-container{max-width:100%!important;padding:0!important}
+.st-key-conteudo{max-width:1250px;width:100%;margin:0 auto;padding:0 24px 8px}
+[data-testid="stElementContainer"]:has(iframe[height="0"]){height:0;margin:0;overflow:hidden}
+.topo{background:linear-gradient(100deg,#1b3624 0%,var(--verde-escuro) 55%,#355b3b 100%);color:#fff;border-bottom:4px solid var(--amarelo);padding:22px 0}
+.topo-in{max-width:1250px;margin:0 auto;padding:0 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.marca{display:flex;align-items:center;gap:14px}
+.logo{font-size:30px;font-weight:800;letter-spacing:.2px;line-height:1.1}.logo span{color:var(--amarelo)}
+.slogan{font-size:14px;color:#d7e2d3;margin-top:3px}
+.header-tag{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:10px 18px;border-radius:22px;font-size:14px;font-weight:600;white-space:nowrap}
+.hero{padding:36px 0 6px}
+.hero-eyebrow{font-size:13px;font-weight:800;letter-spacing:.14em;color:var(--marrom);margin-bottom:10px}
+.pagina-titulo{font-size:clamp(32px,5vw,50px);font-weight:800;line-height:1.1;color:var(--verde-escuro);padding-left:18px;border-left:8px solid var(--amarelo);margin-bottom:14px}
+.pagina-sub{font-size:18px;line-height:1.55;color:#4d5f4f;max-width:820px}
+.st-key-formulario{background:#fffdf7;border:1px solid #e6dcc3;border-radius:16px;padding:10px 30px 30px;box-shadow:0 4px 18px rgba(80,60,20,.07)}
+.secao-titulo{display:flex;align-items:center;gap:12px;font-size:25px;font-weight:800;color:var(--verde-escuro);margin:26px 0 14px;padding-bottom:12px;border-bottom:2px solid #e8dfc6}
+.secao-num{background:var(--verde);color:#fff;font-size:15px;font-weight:800;min-width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+[data-testid="stWidgetLabel"] p{font-size:16px!important;font-weight:700!important;color:#405342!important}
+
+/* Campos de seleção e entrada */
+div[data-baseweb="select"] > div,
+div[data-baseweb="base-input"],
+div[data-baseweb="input"] {
+    background-color: var(--bege) !important;
+    border: 1px solid var(--bege-borda) !important;
+    border-radius: 9px !important;
+    color: var(--texto) !important;
+    min-height: 48px;
+}
+
+/* Texto dentro dos campos */
+div[data-baseweb="select"] *,
+div[data-baseweb="base-input"] input,
+div[data-baseweb="input"] input {
+    color: var(--texto) !important;
+    -webkit-text-fill-color: var(--texto) !important;
+}
+
+/* Fundo dos menus suspensos */
+[data-baseweb="popover"],
+[data-baseweb="popover"] > div,
+[data-baseweb="menu"],
+[data-baseweb="menu"] ul,
+[role="listbox"] {
+    background-color: var(--bege-claro) !important;
+    color: var(--texto) !important;
+}
+
+/* Opções dos menus */
+[role="option"],
+[data-baseweb="menu"] li,
+[data-baseweb="popover"] li {
+    background-color: var(--bege-claro) !important;
+    color: var(--texto) !important;
+}
+
+/* Opção selecionada ou sob o cursor */
+[role="option"]:hover,
+[role="option"][aria-selected="true"],
+[data-baseweb="menu"] li:hover,
+[data-baseweb="menu"] li[aria-selected="true"] {
+    background-color: var(--verde-claro) !important;
+    color: var(--verde-escuro) !important;
+}
+
+/* Calendário */
+[data-baseweb="calendar"],
+[data-baseweb="calendar"] *,
+[data-baseweb="datepicker"],
+[data-baseweb="datepicker"] * {
+    color-scheme: light !important;
+}
+
+[data-baseweb="calendar"],
+[data-baseweb="datepicker"] {
+    background-color: var(--bege-claro) !important;
+    color: var(--texto) !important;
+}
+
+/* Dias do calendário */
+[data-baseweb="calendar"] button {
+    color: var(--texto) !important;
+    background-color: transparent !important;
+}
+
+[data-baseweb="calendar"] button:hover {
+    background-color: var(--verde-claro) !important;
+}
+
+/* Dia selecionado */
+[data-baseweb="calendar"] button[aria-selected="true"] {
+    background-color: var(--verde) !important;
+    color: #ffffff !important;
+}
+
+/* Cabeçalho do calendário */
+[data-baseweb="calendar"] svg {
+    fill: var(--verde-escuro) !important;
+    color: var(--verde-escuro) !important;
+}
+div[data-baseweb="select"]>div:hover,div[data-baseweb="select"]>div:focus-within,div[data-baseweb="base-input"]:focus-within{border-color:var(--verde)!important}
+div[data-baseweb="select"] *,div[data-baseweb="base-input"] input{color:var(--texto)!important;-webkit-text-fill-color:var(--texto)}
+div[data-baseweb="base-input"] input{background:transparent!important;font-size:16px}
+div[data-baseweb="select"] div[value]{font-size:16px}
+input::placeholder{color:#8c8167!important;-webkit-text-fill-color:#8c8167!important;opacity:1}
+[data-baseweb="popover"] [data-baseweb="menu"],[data-baseweb="popover"] ul{background:var(--bege-claro)!important}
+[data-baseweb="popover"] li{background:var(--bege-claro)!important;color:var(--texto)!important}
+[data-baseweb="popover"] li:hover,[data-baseweb="popover"] li[aria-selected="true"]{background:var(--verde-claro)!important}
+[data-baseweb="calendar"]{background:var(--bege-claro)!important;color:var(--texto)!important}
+[data-baseweb="calendar"] [aria-selected="true"]{background:var(--verde)!important;color:#fff!important}
+[data-testid="stCheckbox"]{background:var(--bege);border:1px solid var(--bege-borda);border-radius:10px;padding:13px 15px;transition:background .2s,border-color .2s}
+[data-testid="stCheckbox"]:hover,[data-testid="stCheckbox"]:has(input:checked){background:var(--verde-claro);border-color:var(--verde)}
+[data-testid="stCheckbox"] label{width:100%;cursor:pointer;align-items:center}
+[data-testid="stCheckbox"] p{font-size:15px!important;font-weight:600!important;color:var(--texto)!important}
+label[data-baseweb="checkbox"]>span:first-child{background:var(--bege-claro)!important;border-color:#a89a78!important}
+label[data-baseweb="checkbox"]:has(input:checked)>span:first-child{background:var(--verde)!important;border-color:var(--verde)!important}
+button[kind="primary"],[data-testid="stBaseButton-primary"]{background:var(--marrom)!important;border:1px solid var(--marrom)!important;color:#fff!important;border-radius:11px!important;padding:.85rem 1rem!important;width:100%;box-shadow:0 3px 10px rgba(111,70,39,.28)}
+button[kind="primary"] p,[data-testid="stBaseButton-primary"] p{color:#fff!important;font-size:18px!important;font-weight:800!important}
+button[kind="primary"]:hover,[data-testid="stBaseButton-primary"]:hover{background:var(--marrom-escuro)!important;border-color:var(--marrom-escuro)!important}
+.resultado-titulo{font-size:clamp(28px,4vw,38px);font-weight:800;color:var(--verde-escuro);margin:38px 0 8px}
+.resultado-resumo{font-size:15px;color:#5f6f5f;line-height:1.7;margin-bottom:26px}
+.grupo-titulo{padding:17px;border-radius:11px;font-size:19px;font-weight:800;text-align:center;margin-bottom:16px}
+.grupo-verde{background:#e2f1e3;color:#2f6a37;border:1px solid #c7e3c9}
+.grupo-amarelo{background:#fff3d2;color:#8f6a14;border:1px solid #f0dfad}
+.grupo-vermelho{background:#f9e5e3;color:#a2403a;border:1px solid #edc9c5}
+.card{background:#fffdf7;border-radius:12px;border-top:5px solid;box-shadow:0 3px 14px rgba(80,60,20,.07);margin-bottom:15px;overflow:hidden}
 .card-verde{border-color:#4c9957}.card-amarelo{border-color:#e6b83f}.card-vermelho{border-color:#cf6660}
 .card-resumo{list-style:none;cursor:pointer;padding:20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
 .card-resumo::-webkit-details-marker{display:none}
-.card-resumo:hover{background:#f8faf6}
-.card-titulo{color:var(--verde-escuro);font-size:17px;font-weight:bold}
+.card-resumo:hover{background:#f6f1e3}
+.card-titulo{color:var(--verde-escuro);font-size:22px;font-weight:800}
 .card-identificacao{display:flex;flex-direction:column;gap:6px}
-.card-posicao{font-size:11px;color:#778477;font-weight:bold}
-.card-seta{font-size:20px;color:#718071;transition:transform .25s}
+.card-posicao{font-size:12px;color:#7d6f52;font-weight:800;letter-spacing:.04em}
+.card-seta{font-size:22px;color:#7d6f52;transition:transform .25s}
 .card[open] .card-seta{transform:rotate(180deg)}
 .card-conteudo{padding:0 20px 22px}
-.descricao{color:#7b897b;font-size:12px;margin:0 0 14px;line-height:1.5}
-.card-sub{font-size:13px;font-weight:bold;margin:14px 0 10px;color:#405342}
-.card ul{padding-left:18px;margin:0}
-.card li{font-size:12px;color:#667466;margin-bottom:8px;line-height:1.5}
-.clima{background:#f2f5ee;border-radius:8px;padding:12px;margin-top:6px}
-.clima p{font-size:12px;margin:0 0 7px;color:#526451;line-height:1.4}.clima p:last-child{margin:0}
+.descricao{color:#6c6a58;font-size:14px;margin:0 0 14px;line-height:1.55}
+.card-sub{font-size:15px;font-weight:800;margin:16px 0 10px;color:#405342}
+.card ul{padding-left:20px;margin:0}
+.card li{font-size:14px;color:#4f5d4f;margin-bottom:8px;line-height:1.55}
+.clima{background:var(--bege);border-radius:9px;padding:13px 14px;margin-top:6px}
+.clima p{font-size:14px;margin:0 0 7px;color:#4a5a4a;line-height:1.45}.clima p:last-child{margin:0}
 .clima strong{color:var(--verde-escuro)}
-.estatisticas{background:var(--verde-escuro);color:#fff;border-radius:12px;padding:30px;margin:35px 0 12px}
-.estatisticas-titulo{font-size:21px;font-weight:bold;margin-bottom:9px}
-.estatisticas p{font-size:13px;color:#d1dfcf;line-height:1.6;margin:0}
-.rodape{background:#1b3624;color:#c5d2c3;text-align:center;padding:20px;font-size:12px;border-radius:12px;margin-top:30px}
+.st-key-faixa_stats {
+    background: var(--verde-escuro);
+    border-radius: 16px;
+    padding: 32px 34px;
+    margin-top: 34px;
+}
+
+/* Alinhamento vertical do texto e botão */
+.st-key-faixa_stats [data-testid="stHorizontalBlock"] {
+    align-items: center;
+}
+
+.estatisticas-titulo {
+    font-size: 27px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 10px;
+    line-height: 1.25;
+}
+
+.estatisticas-texto {
+    font-size: 16px;
+    color: #d1dfcf;
+    line-height: 1.65;
+    margin: 0;
+    max-width: 780px;
+}
+
+/* Botão de estatísticas */
+.st-key-btn_stats button {
+    background: var(--amarelo) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    padding: .7rem 1.1rem !important;
+    width: 100% !important;
+    min-height: 48px;
+}
+
+.st-key-btn_stats button p {
+    color: #283b2b !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+}
+
+.st-key-btn_stats button:hover {
+    background: #f4cf68 !important;
+}
+
+.st-key-btn_stats button{background:var(--amarelo)!important;border:none!important;border-radius:10px!important;padding:.7rem 1.4rem!important}
+.st-key-btn_stats button p{color:#283b2b!important;font-size:16px!important;font-weight:800!important}
+.st-key-btn_stats button:hover{background:#f4cf68!important}
+.rodape{background:#1b3624;color:#c5d2c3;text-align:center;padding:26px 20px;font-size:14px;line-height:1.6;margin-top:44px}
+@media (max-width:640px){.header-tag{display:none}.st-key-formulario{padding:6px 16px 22px}.st-key-faixa_stats{padding:24px 20px}
+
+header-tag {
+        display: none;
+    }
+
+    .st-key-formulario {
+        padding: 6px 16px 22px;
+    }
+
+    .st-key-faixa_stats {
+        padding: 24px 20px;
+    }
+
+    .estatisticas-titulo {
+        font-size: 22px;
+    }
+
+    .estatisticas-texto {
+        font-size: 14px;
+    }
+
+    .st-key-btn_stats button {
+        padding: .6rem .7rem !important;
+    }
+
+    .st-key-btn_stats button p {
+        font-size: 13px !important;
+    }
+}
 </style>"""
+
+MARCA_SVG = ('<svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="22" fill="#355b3b" '
+             'stroke="#e9bd45" stroke-width="2"/><path d="M13 30c0-9 7-15 19-15 0 11-6 17-15 17-2 0-3-.8-4-2z" fill="#e9bd45"/>'
+             '<path d="M13 33c5-6 10-10 15-13" stroke="#23452f" stroke-width="2" fill="none" stroke-linecap="round"/></svg>')
+
+SCRIPT_PT_BR = """<script>
+const d = window.parent.document;
+d.documentElement.lang = "pt-BR";
+d.documentElement.setAttribute("translate", "no");
+const meta = (k, v, c) => { if (!d.querySelector('meta[' + k + '="' + v + '"]')) { const m = d.createElement("meta"); m.setAttribute(k, v); m.content = c; d.head.appendChild(m); } };
+meta("name", "google", "notranslate");
+meta("http-equiv", "content-language", "pt-BR");
+</script>"""
 
 # título do grupo, cor, rótulo da lista de motivos
 GRUPOS = {
@@ -64,6 +285,11 @@ GRUPOS = {
     "razoaveis": ("Alternativas razoáveis", "amarelo", "Por que considerar?"),
     "nao_recomendadas": ("Culturas não recomendadas", "vermelho", "Por que evitar?"),
 }
+
+
+def secao(numero: str, titulo: str):
+    badge = f'<span class="secao-num">{numero}</span>' if numero else ""
+    st.markdown(f'<div class="secao-titulo">{badge}{titulo}</div>', unsafe_allow_html=True)
 
 
 # ------------------------------------------------------------------ captura dos dados (formulário -> Entrada)
@@ -74,36 +300,129 @@ def grade_checkbox(prefixo: str, opcoes: dict) -> list:
             if colunas[i % 3].checkbox(rotulo, key=f"{prefixo}_{valor}")]
 
 
+def ordenar_por_tamanho(opcoes):
+    """Ordena opções pelo tamanho do texto e depois alfabeticamente."""
+    return sorted(opcoes, key=lambda item: (len(str(item)), str(item).casefold()))
+
+
+
 def coletar_entrada():
     """Desenha o formulário e devolve (Entrada, clicou_no_botao)."""
-    with st.container(border=True):
-        st.markdown('<div class="secao-titulo">01. Características da propriedade</div>', unsafe_allow_html=True)
+
+    with st.container(key="formulario"):
+
+        secao("01", "Localização da propriedade")
+
         c1, c2 = st.columns(2)
-        penultimo = c1.selectbox("Penúltimo plantio", mt.CULTURAS_HISTORICO, index=None, placeholder="Selecione a cultura")
-        ultimo = c2.selectbox("Último plantio", mt.CULTURAS_HISTORICO, index=None, placeholder="Selecione a cultura")
+
+        estados_ordenados = sorted(
+            mt.ESTADOS,
+            key=lambda uf: (
+                len(mt.ESTADOS[uf][0]),
+                mt.ESTADOS[uf][0].casefold()
+            )
+        )
+
+        uf = c1.selectbox(
+            "Estado",
+            estados_ordenados,
+            index=None,
+            placeholder="Selecione o estado",
+            format_func=lambda u: mt.ESTADOS[u][0]
+        )
+
+        cidades = ordenar_por_tamanho(mt.ESTADOS[uf][1]) if uf else []
+
+        cidade = c2.selectbox(
+            "Cidade",
+            cidades,
+            index=None,
+            disabled=not uf,
+            placeholder="Selecione a cidade" if uf else "Selecione primeiro o estado",
+            key=f"cidade_{uf}"
+        )
+
+        secao("02", "Histórico de plantio")
 
         c3, c4 = st.columns(2)
-        uf = c3.selectbox("Estado", list(mt.ESTADOS), index=None, placeholder="Selecione o estado",
-                          format_func=lambda u: mt.ESTADOS[u][0])
-        cidade = c4.selectbox("Cidade", mt.ESTADOS[uf][1] if uf else [], index=None, disabled=not uf,
-                              placeholder="Selecione a cidade" if uf else "Selecione primeiro o estado",
-                              key=f"cidade_{uf}")      # a chave muda com o estado: a lista reinicia
+
+        culturas_historico = ordenar_por_tamanho(mt.CULTURAS_HISTORICO)
+
+        penultimo = c3.selectbox(
+            "Penúltimo plantio",
+            culturas_historico,
+            index=None,
+            placeholder="Selecione a cultura"
+        )
+
+        ultimo = c4.selectbox(
+            "Último plantio",
+            culturas_historico,
+            index=None,
+            placeholder="Selecione a cultura"
+        )
+
+        secao("03", "Próximo plantio")
 
         c5, c6 = st.columns(2)
-        data = c5.date_input("Data prevista para a próxima plantação", value=None, format="DD/MM/YYYY")
-        desejada = c6.selectbox("Qual cultura deseja plantar?", mt.CULTURAS_DESEJADAS, index=0)
 
-        st.markdown('<div class="secao-titulo">02. Problemas identificados na área</div>', unsafe_allow_html=True)
+        data = c5.date_input(
+            "Data prevista para a próxima plantação",
+            value=None,
+            min_value=date.today(),
+            format="DD/MM/YYYY"
+        )
+
+        culturas_desejadas = [
+            "Sem preferência"
+        ] + ordenar_por_tamanho(
+            [c for c in mt.CULTURAS_DESEJADAS if c != "Sem preferência"]
+        )
+
+        desejada = c6.selectbox(
+            "Qual cultura deseja plantar?",
+            culturas_desejadas,
+            index=0
+        )
+
+        secao("04", "Problemas identificados na área")
+
         problemas = grade_checkbox("prob", mt.PROBLEMAS)
-        st.markdown('<div class="secao-titulo">03. Objetivos para a próxima safra</div>', unsafe_allow_html=True)
-        objetivos = grade_checkbox("obj", mt.OBJETIVOS)
-        tipos = st.multiselect("Tipos de cultura que você considera plantar (vazio = todos)", list(mt.TIPOS_CULTURA),
-                               format_func=lambda t: mt.TIPOS_CULTURA[t], placeholder="Todos os tipos")
-        clicou = st.button("Analisar área e gerar recomendações", type="primary")
 
-    entrada = mt.Entrada(penultimo=penultimo, ultimo=ultimo, uf=uf, cidade=cidade, data_plantio=data,
-                         cultura_desejada=None if desejada == "Sem preferência" else desejada,
-                         problemas=problemas, objetivos=objetivos, tipos_cultura=tipos)
+        secao("05", "Objetivos para a próxima safra")
+
+        objetivos = grade_checkbox("obj", mt.OBJETIVOS)
+
+        tipos = st.multiselect(
+            "Tipos de cultura que você considera plantar (vazio = todos)",
+            list(mt.TIPOS_CULTURA),
+            format_func=lambda t: mt.TIPOS_CULTURA[t],
+            placeholder="Todos os tipos"
+        )
+
+        st.write("")
+
+        # Botão centralizado em relação à largura da página
+        _, meio, _ = st.columns([2, 3, 2])
+
+        clicou = meio.button(
+            "Gerar recomendações",
+            type="primary",
+            key="btn_gerar"
+        )
+
+    entrada = mt.Entrada(
+        penultimo=penultimo,
+        ultimo=ultimo,
+        uf=uf,
+        cidade=cidade,
+        data_plantio=data,
+        cultura_desejada=None if desejada == "Sem preferência" else desejada,
+        problemas=problemas,
+        objetivos=objetivos,
+        tipos_cultura=tipos
+    )
+
     return entrada, clicou
 
 
@@ -121,16 +440,14 @@ def html_card(rec, posicao: int, cor: str, titulo_motivos: str) -> str:
             f'<div class="card-sub">Características meteorológicas</div><div class="clima">{clima}</div></div></details>')
 
 
-def html_resumo(e: mt.Entrada, resultado: mt.Resultado, demo: bool) -> str:
-    if demo:
-        return f"Simulação demonstrativa para {escape(e.cidade)} - {escape(e.uf)}. Os resultados abaixo são fictícios."
+def html_resumo(e: mt.Entrada, resultado: mt.Resultado) -> str:
     texto = (f"Área analisada: <strong>{escape(e.cidade)} - {escape(e.uf)}</strong>"
              f" | Histórico: <strong>{escape(e.penultimo)} → {escape(e.ultimo)}</strong>"
              f" | Próximo plantio: <strong>{e.data_plantio.strftime('%d/%m/%Y')}</strong>"
              f" | Cultura desejada: <strong>{escape(e.cultura_desejada or 'Sem preferência')}</strong>"
-             f"<br><br>Problemas identificados: {escape(', '.join(e.problemas) or 'Nenhum informado')}"
+             f"<br>Problemas identificados: {escape(', '.join(e.problemas) or 'Nenhum informado')}"
              f"<br>Objetivos: {escape(', '.join(e.objetivos) or 'Nenhum informado')}")
-    if resultado.observacoes:
+    if resultado.observacoes:                  # notas do modelo: cultura desejada, água no solo, torres fora da nota
         texto += "<br><br>" + "<br>".join(escape(o) for o in resultado.observacoes)
     if resultado.fonte == "mock":
         texto += ("<br><br><em>As recomendações exibidas são demonstrativas e ainda não são calculadas "
@@ -138,9 +455,9 @@ def html_resumo(e: mt.Entrada, resultado: mt.Resultado, demo: bool) -> str:
     return texto
 
 
-def mostrar_resultado(e: mt.Entrada, resultado: mt.Resultado, demo: bool):
+def mostrar_resultado(e: mt.Entrada, resultado: mt.Resultado):
     st.markdown('<div class="resultado-titulo">Recomendações para sua próxima safra</div>'
-                f'<div class="resultado-resumo">{html_resumo(e, resultado, demo)}</div>', unsafe_allow_html=True)
+                f'<div class="resultado-resumo">{html_resumo(e, resultado)}</div>', unsafe_allow_html=True)
     for coluna, (chave, (titulo, cor, tit_motivos)) in zip(st.columns(3), GRUPOS.items()):
         cards = "".join(html_card(r, i, cor, tit_motivos) for i, r in enumerate(getattr(resultado, chave), 1))
         coluna.markdown(f'<div class="grupo-titulo grupo-{cor}">{titulo}</div>{cards}', unsafe_allow_html=True)
@@ -149,55 +466,85 @@ def mostrar_resultado(e: mt.Entrada, resultado: mt.Resultado, demo: bool):
 def mostrar_estatisticas(e: mt.Entrada):
     est = mt.obter_estatisticas(e)
     df = pd.DataFrame({"Chuva (mm)": est["chuva_mm"], "Temperatura média (°C)": est["temp_c"]}, index=est["meses"])
-    st.markdown('<div class="secao-titulo">Estatísticas da região</div>', unsafe_allow_html=True)
+    secao("", f"Estatísticas da região: {e.cidade} - {e.uf}")
     c1, c2 = st.columns(2)
     c1.markdown("**Chuva média mensal (mm)**")
     c1.bar_chart(df["Chuva (mm)"])
     c2.markdown("**Temperatura média mensal (°C)**")
     c2.line_chart(df["Temperatura média (°C)"])
-    st.caption(est["aviso"])
+
+
+def alternar_estatisticas():
+    st.session_state["stats"] = not st.session_state.get("stats", False)
 
 
 # ------------------------------------------------------------------ página
 st.markdown(CSS, unsafe_allow_html=True)
-st.markdown('<div class="topo"><div><div class="logo">Agro<span>Data</span></div>'
-            '<p>Inteligência agrícola para decisões mais sustentáveis</p></div>'
-            '<div class="header-tag">Apoio à rotação de culturas</div></div>'
-            '<div class="pagina-titulo">Planejamento da próxima plantação</div>'
-            '<div class="pagina-sub">Informe as condições da sua área para receber recomendações de culturas '
-            'considerando o histórico, os objetivos e o clima.</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="topo"><div class="topo-in"><div class="marca">{MARCA_SVG}<div>'
+            f'<div class="logo">{NOME}<span>{NOME_DESTAQUE}</span></div><div class="slogan">{SLOGAN}</div></div></div>'
+            '<div class="header-tag">Apoio à decisão do produtor</div></div></div>', unsafe_allow_html=True)
 
-entrada, clicou = coletar_entrada()
+with st.container(key="conteudo"):
+    st.markdown('<div class="hero"><div class="hero-eyebrow">PLANEJAMENTO DA SAFRA</div>'
+                '<div class="pagina-titulo">Planejamento da próxima plantação</div>'
+                '<div class="pagina-sub">Informe as condições da sua área e receba recomendações de culturas '
+                'considerando o histórico, os objetivos e o clima.</div></div>', unsafe_allow_html=True)
 
-if "resultado" not in st.session_state:               # primeira visita: mostra a demonstração
-    st.session_state.update(demo=True, entrada_res=mt.ENTRADA_DEMO,
-                            resultado=mt.gerar_recomendacoes(mt.ENTRADA_DEMO, motor="mock"))
+    entrada, clicou = coletar_entrada()
 
-if clicou:
-    faltam = mt.validar_entrada(entrada)
-    if faltam:
-        st.error("Preencha " + (", ".join(faltam[:-1]) + " e " if len(faltam) > 1 else "") + faltam[-1] + ".")
-    else:
-        try:
-            with st.spinner("Gerando recomendações..."):
-                resultado = mt.gerar_recomendacoes(entrada)
-            # guarda uma "foto" da entrada: o resultado só muda quando o produtor clicar de novo
-            st.session_state.update(demo=False, entrada_res=entrada, resultado=resultado)
-        except Exception as erro:
-            st.error(f"Não foi possível gerar as recomendações: {erro}")
+    if clicou:
+        faltam = mt.validar_entrada(entrada)
+        if faltam:
+            st.error("Preencha " + (", ".join(faltam[:-1]) + " e " if len(faltam) > 1 else "") + faltam[-1] + ".")
+        else:
+            try:
+                with st.spinner("Gerando recomendações..."):
+                    resultado = mt.gerar_recomendacoes(entrada)
+                # guarda uma "foto" da entrada: o resultado só muda quando o produtor gerar de novo
+                st.session_state.update(entrada_res=entrada, resultado=resultado)
+            except Exception as erro:
+                st.error(f"Não foi possível gerar as recomendações: {erro}")
 
-mostrar_resultado(st.session_state.entrada_res, st.session_state.resultado, st.session_state.demo)
+    if "resultado" in st.session_state:
+        mostrar_resultado(st.session_state["entrada_res"], st.session_state["resultado"])
+        
+with st.container(key="faixa_stats"):
 
-st.markdown('<div class="estatisticas"><div class="estatisticas-titulo">Quer entender os dados por trás das recomendações?</div>'
-            '<p>Consulte gráficos, indicadores de produtividade, características do solo, dados climáticos e estudos '
-            'utilizados para fundamentar as recomendações.</p></div>', unsafe_allow_html=True)
-if st.button("Acessar estatísticas →", key="btn_stats"):
-    st.session_state.stats = not st.session_state.get("stats", False)
-if st.session_state.get("stats"):
-    mostrar_estatisticas(st.session_state.entrada_res)
+    texto_stats, botao_stats = st.columns([4, 1])
 
-aviso_rodape = ("A demonstração inicial é fictícia. As análises usam NASA POWER (clima e umidade do solo), "
-                "SoilGrids, ECOCROP/FAO e o ZARC/MAPA; confirme as condições de crédito com sua instituição financeira."
-                if mt.DADOS_REAIS else "Dados, recomendações e indicadores apresentados nesta versão são fictícios.")
-st.markdown('<div class="rodape">DataLab © 2026 | Plataforma de apoio à decisão do produtor.<br><br>'
-            f'{aviso_rodape}</div>', unsafe_allow_html=True)
+    with texto_stats:
+        st.markdown(
+            '<div class="estatisticas-titulo">'
+            'Quer entender os dados por trás das recomendações?'
+            '</div>'
+            '<p class="estatisticas-texto">'
+            'Consulte gráficos, indicadores de produtividade, '
+            'características do solo, dados climáticos e estudos '
+            'utilizados para fundamentar as recomendações.'
+            '</p>',
+            unsafe_allow_html=True
+        )
+
+    with botao_stats:
+        st.button(
+            "Ocultar estatísticas" if st.session_state.get("stats")
+            else "Acessar estatísticas →",
+            key="btn_stats",
+            on_click=alternar_estatisticas
+        )
+
+        if st.session_state.get("stats"):
+            mostrar_estatisticas(st.session_state["entrada_res"])
+
+fontes_dados = ("<br>Dados: NASA POWER (clima e umidade do solo), SoilGrids, ECOCROP/FAO e ZARC/MAPA. "
+                "Confirme as condições de crédito com sua instituição financeira." if mt.DADOS_REAIS
+                else "<br>Versão de demonstração: recomendações e indicadores fictícios.")
+st.markdown(f'<div class="rodape">{NOME}{NOME_DESTAQUE} © 2026 | Plataforma de apoio à decisão do produtor.<br>'
+            'Ferramenta de apoio: não substitui a avaliação do agrônomo nem o conhecimento local da área.'
+            f'{fontes_dados}</div>', unsafe_allow_html=True)
+
+if components is not None:                # marca a página como pt-BR e sem tradução automática
+    try:
+        components.html(SCRIPT_PT_BR, height=0)
+    except Exception:
+        pass
