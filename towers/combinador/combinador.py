@@ -13,7 +13,7 @@
   1 − ``peso_aderencia`` × (1 − aderência) (0,6 a 1,0 com o padrão). ``score_agronomico`` guarda a nota antes dela.
 - Cultura desejada (``desejada``, nome exibido): nota + ``bonus_desejada`` × (1 − nota), se não eliminada.
 
-Entradas: as saídas das torres sem colapsar variantes. T1, T2, T4 e T6 são por (id_cultura, plantio);
+Entradas: as saídas das torres sem colapsar variantes. T1, T2, T4, T6 e T7 são por (id_cultura, plantio);
 T3 e T5 são por id_cultura. ``extras`` permite plugar outras torres (ex.: a de extremos de temperatura):
 {"nome": (DataFrame com id_cultura[, plantio] e score_<nome>, peso)}.
 """
@@ -27,6 +27,7 @@ from .preferencias import BONUS_DESEJADA, PESO_ADERENCIA
 
 def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame | None = None,
              t4: pl.DataFrame | None = None, t5: pl.DataFrame | None = None, t6: pl.DataFrame | None = None,
+             t7: pl.DataFrame | None = None,
              objetivo: str = "equilibrado", somente_financiaveis: bool | None = None,
              extras: dict[str, tuple[pl.DataFrame, float]] | None = None,
              peso_evidencia: float = PESO_EVIDENCIA, pesos: dict[str, float] | None = None,
@@ -65,6 +66,10 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
     if t6 is not None:
         df = df.join(t6.select(*chave, "status_elegibilidade", "financiavel", "elegivel_proagro", "portaria_zarc",
                                motivos_elegibilidade=pl.col("motivos")), on=chave, how="left")
+    if t7 is not None:
+        df = df.join(t7.select(*chave, s_t7=pl.col("score_t7"), p_extremo=pl.col("p_algum"),
+                               p_chuva_extrema=pl.col("p_chuva_extrema"), p_queda_brusca=pl.col("p_queda_brusca"),
+                               n_anos_t7=pl.col("n_anos_t7")), on=chave, how="left")
     for nome, (extra, peso) in (extras or {}).items():
         k = [c for c in chave if c in extra.columns]
         df = df.join(extra.select(*k, pl.col(f"score_{nome}").alias(f"s_{nome}")), on=k, how="left")

@@ -1,0 +1,68 @@
+# Torre 7: probabilidade de extremos climáticos (schema em towers/t7_extremos/config.py).
+# status: PROVISORIO (valor de trabalho) | DEFINIDO (fechado, com fonte)
+# valor: null = ainda não escolhido (o cálculo para em vez de inventar um número)
+
+referencia:
+  arquivo: data/raw/power/dados_unificados.csv
+  ano_inicio: 2000
+  ano_fim: 2021            # 2022 em diante é do ML
+  fonte_dados: "NASA POWER diário (reanálise MERRA-2, grade 0,5° x 0,625°): PRECTOTCORR, T2M, T2M_MAX, T2M_MIN, RH2M, WS2M; pontos P01–P20 (coordenadas a obter)"
+  data_download: null      # a obter
+
+bootstrap:                 # IC por sorteio de anos inteiros, com reposição
+  repeticoes: 1000
+  semente: 42
+  nivel_ic: 0.95
+
+limiares:
+  chuva_extrema:
+    valor: 80.0            # evento = chuva em 3 dias > 80 mm
+    unidade: mm
+    janela_dias: 3
+    fonte: "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 80 mm deixa P(>=1 evento) entre 0,33 e 0,71 em todos; não é critério de dano agronômico"
+    vigencia: "2026-11-14"
+    status: PROVISORIO
+    grade_sensibilidade: []   # vazio = grade padrão do script de sensibilidade
+
+  queda_temperatura:
+    valor: 5.0             # evento = queda de T2M em 2 dias >= 5 °C
+    unidade: °C
+    janela_dias: 2
+    absoluto: false        # false = só esfriamento
+    fonte: "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 5 °C deixa P(>=1 evento) entre 0,19 e 0,67 em todos; não é critério de dano agronômico"
+    vigencia: "2026-11-14"
+    status: PROVISORIO
+    grade_sensibilidade: [3.0, 4.0, 5.0, 6.0]
+
+  estiagem:                # informativo
+    n_dias: 10
+    n_dias_status: PROVISORIO
+    limiar_amplitude_alta: null   # a definir (anomalia em °C)
+    limiar_amplitude_alta_status: PROVISORIO
+    janela_climatologia_dias: 31
+    fonte: "análise preliminar em um único ponto (2000–2021)"
+
+enso:                      # condicionante; sem tabela de fases = "nao_calculado"
+  indice: null             # a definir: RONI ou ONI (NOAA)
+  tabela: null             # a obter: CSV com colunas ano (início da safra) e fase (El Niño | La Niña | Neutro)
+  fase_atual: null
+  k: 10.0                  # p_final = (n·p_enso + k·p_clim) / (n + k)
+  k_status: PROVISORIO
+  repeticoes_permutacao: 10000
+  fonte: "k = 10: valor inicial sugerido, a confirmar"
+
+gpd:                       # GPD: na safra, substitui o empírico só na chuva (pontos aprovados)
+  quantil_limiar: 0.95     # u = quantil 0,95 da série da safra; ξ estável entre 0,90 e 0,975 no P06
+  grade_quantis: [0.90, 0.95, 0.975]
+  r_chuva: 3               # declustering: 3 dias abaixo de u encerram o grupo (soma é de 3 dias)
+  r_queda: 2
+  repeticoes_bootstrap: 200
+  periodos_retorno: [10.0, 20.0]
+  estabilidade_repeticoes: 200
+  estabilidade_fracao: 0.85
+  estabilidade_T: 10.0
+  criterio_razao: 1.5
+  criterio_dp_xi: 0.20
+  usar_na_chuva: true      # safra out–mar: chuva extrema pela GPD nos pontos aprovados; demais, empírico
+  exigir_concordancia: true   # e só onde o valor empírico cai dentro do IC da GPD
+  resultado: artifacts/t7/gpd/gpd_por_ponto.csv   # gerado por `python -m scripts.t7_gpd`

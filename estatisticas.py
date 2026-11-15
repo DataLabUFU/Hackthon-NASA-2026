@@ -36,6 +36,7 @@ FONTES = [
     "Solo: SoilGrids 2.0 (ISRIC), mapas globais de 250 m a 1 km; não substitui a análise de solo da sua área.",
     "Zoneamento: ZARC/MAPA, Tábua de Risco da safra vigente (decêndios de 10 dias).",
     "Exigências das culturas: ECOCROP/FAO e FAO-56 (consumo de água), com ajustes da Embrapa.",
+    "Extremos (Torre 7): chuva > 80 mm em 3 dias e queda de 5 °C em 2 dias (limiares provisórios), NASA POWER.",
 ]
 
 

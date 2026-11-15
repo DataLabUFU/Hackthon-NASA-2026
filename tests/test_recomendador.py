@@ -49,7 +49,7 @@ def ambiente(monkeypatch):
     monkeypatch.setattr(rc, "clima_diario", lambda *a, **k: pl.DataFrame())
     monkeypatch.setattr(rc, "avaliar_t1", lambda *a, **k: t1_())
     monkeypatch.setattr(rc, "avaliar_t3", lambda *a, **k: t3_())
-    for nome in ("avaliar_t2", "avaliar_t4", "avaliar_t5", "avaliar_t6"):
+    for nome in ("avaliar_t2", "avaliar_t4", "avaliar_t5", "avaliar_t6", "avaliar_t7"):
         monkeypatch.setattr(rc, nome, lambda *a, **k: None)
     return monkeypatch
 

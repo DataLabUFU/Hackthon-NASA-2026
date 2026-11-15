@@ -2,7 +2,7 @@
 """RotaSafra: interface Streamlit. A lógica fica em motor.py.
 
 Rodar:  pip install -r requirements.txt,  python scripts/preparar_dados.py  e  streamlit run app_teste.py
-O modelo real (seis torres em towers/) é o padrão quando os dados existem; force com MOTOR_RECOMENDACAO=mock|modelo.
+O modelo real (sete torres em towers/) é o padrão quando os dados existem; force com MOTOR_RECOMENDACAO=mock|modelo.
 
 Este arquivo é autossuficiente no visual: não depende de .streamlit/config.toml.
 """
@@ -652,7 +652,7 @@ with st.container(key="faixa_stats"):
 if st.session_state.get("stats"):
     mostrar_estatisticas(st.session_state.get("entrada_res", entrada), st.session_state.get("resultado"))
 
-fontes_dados = ("<br>Dados: NASA POWER (clima e umidade do solo), SoilGrids, ECOCROP/FAO e ZARC/MAPA. "
+fontes_dados = ("<br>Dados: NASA POWER (clima, extremos e umidade do solo), SoilGrids, ECOCROP/FAO e ZARC/MAPA. "
                 "Confirme as condições de crédito com sua instituição financeira." if mt.DADOS_REAIS
                 else "<br>Versão de demonstração: recomendações e indicadores fictícios.")
 st.markdown(f'<div class="rodape">{NOME}{NOME_DESTAQUE} © 2026 | Plataforma de apoio à decisão do produtor.<br>'

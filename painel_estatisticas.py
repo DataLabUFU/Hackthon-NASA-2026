@@ -20,7 +20,7 @@ TEMP = "#eb6834"
 MARCA = "#e9bd45"        # amarelo do app: marca a data do produtor
 RISCO = {"Até 20%": "#23452f", "Até 30%": "#477b43", "Até 40%": "#8db38a", "Até 50%": "#c3d9bf",
          "Não indicado": "#efe6d3"}
-NOMES_CRITERIOS = {"t1": "Clima", "t2": "Água", "t3": "Solo", "t4": "ZARC", "t5": "Rotação",
+NOMES_CRITERIOS = {"t1": "Clima", "t2": "Água", "t3": "Solo", "t4": "ZARC", "t5": "Rotação", "t7": "Extremos",
                    "aderencia": "Seus objetivos", "aptidao_local": "Aptidão do local", "nota": "Nota final"}
 
 CSS = """<style>
@@ -199,7 +199,8 @@ def _zarc(z: dict) -> None:
 
 def _notas(notas: list[dict]) -> None:
     _bloco("Como cada cultura foi avaliada",
-           "Notas de 0 a 100 por critério. A nota final combina clima, água, solo, zoneamento e rotação e depois "
+           "Notas de 0 a 100 por critério. A nota final combina clima, água, solo, zoneamento, rotação e extremos e "
+           "depois "
            "é ajustada pelos seus objetivos e pela sua cultura desejada.")
     setor = {"melhores": "Recomendada", "intermediarias": "Alternativa", "piores": "Não recomendada",
              "desejada": "Sua escolha"}
@@ -207,14 +208,14 @@ def _notas(notas: list[dict]) -> None:
     for n in notas:
         linha = {"Cultura": n["cultura"] + (" (sua escolha)" if n["desejada"] else ""),
                  "Grupo": setor.get(n["setor"], n["setor"])}
-        for k in ("nota", "t1", "t2", "t3", "t4", "t5", "aderencia"):
+        for k in ("nota", "t1", "t2", "t3", "t4", "t5", "t7", "aderencia"):
             v = n.get(k)
             linha[NOMES_CRITERIOS[k]] = None if v is None else round(100 * v)
         linhas.append(linha)
     df = pd.DataFrame(linhas)
     barra = {NOMES_CRITERIOS[k]: st.column_config.ProgressColumn(NOMES_CRITERIOS[k], min_value=0, max_value=100,
                                                                   format="%d", width="small") for k in
-             ("nota", "t1", "t2", "t3", "t4", "t5", "aderencia")}
+             ("nota", "t1", "t2", "t3", "t4", "t5", "t7", "aderencia")}
     barra["Cultura"] = st.column_config.TextColumn("Cultura", width="medium")
     barra["Grupo"] = st.column_config.TextColumn("Grupo", width="small")
     st.dataframe(df, hide_index=True, use_container_width=True, column_config=barra)
@@ -224,6 +225,8 @@ def _notas(notas: list[dict]) -> None:
         "Solo: pH, textura, drenagem e fertilidade frente à exigência da cultura (problemas corrigíveis pesam menos).",
         "ZARC: risco do zoneamento oficial na data; culturas sem zoneamento ficam neutras (célula vazia).",
         "Rotação: efeito do seu histórico (ex.: gramínea depois de leguminosa ganha; repetir a cultura perde).",
+        "Extremos: 100 menos a chance (% dos anos desde 2001) de chuva acima de 80 mm em 3 dias ou queda de 5 °C "
+        "em 2 dias nas fases sensíveis do ciclo (estabelecimento, floração e colheita).",
         "Seus objetivos: quanto a cultura entrega o que você marcou (vazio quando nada foi marcado).",
     ])
 

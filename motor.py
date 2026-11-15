@@ -1,7 +1,7 @@
 """Camada de dados e decisão do AgroData.
 
 Este é o ÚNICO arquivo que liga a interface ao modelo. A interface (app_teste.py) só lê o `Resultado`.
-O modelo real (`motor_modelo`) usa o recomendador de seis torres em `towers/` (towers.combinador.recomendar);
+O modelo real (`motor_modelo`) usa o recomendador de sete torres em `towers/` (towers.combinador.recomendar);
 é o padrão quando os dados estão baixados (scripts/preparar_dados.py). `motor_mock` continua para demonstração.
 
 Fluxo:  Entrada (formulário)
@@ -373,7 +373,8 @@ def _por_que_diferente(r: dict, d: dict) -> str:
         return f"; {alvo} ganhou prioridade por ser a sua escolha" + (
             "" if ar >= ad_ else f" e vai melhor no local (aptidão {100 * ad_:.0f} contra {100 * ar:.0f})")
     if ar > ad_ + 0.02:
-        return f"; {alvo} perde no local" + (f" em {fracos}" if fracos else "") +             f" (aptidão {100 * ad_:.0f} contra {100 * ar:.0f} de {nome})"
+        return (f"; {alvo} tem aptidão menor no local ({100 * ad_:.0f} contra {100 * ar:.0f})"
+                + (f" e perde em {fracos}" if fracos else ""))
     if xr is not None and xd is not None and xr > xd:
         return f"; {nome} atende melhor ao que você pediu"
     return ""
@@ -405,8 +406,9 @@ def _justificativas_do_produtor(r: dict, e: Entrada | None, ctx: dict | None = N
             m.append(f"{ancora}: {_resposta_ao_pedido(r, cod)}")
         elif o == "Aumentar produtividade" and r.get("s_t1") is not None and not r.get("eliminada"):
             apta = f", apta em {_pct(r['prob_apta'])} dos anos" if r.get("prob_apta") is not None else ""
+            ext = (f"; {_frase_extremos(r)}" if r.get("p_extremo") is not None else "")
             m.append(f"{ancora}: clima {_qualidade(r['s_t1'])} e água {_qualidade(r.get('s_t2'))} na data "
-                     f"sugerida{apta}.")
+                     f"sugerida{apta}{ext}.")
         elif o == "Acesso a crédito e seguro":
             m.append(f"{ancora}: " + {
                 "elegivel": "dentro do zoneamento oficial (ZARC); elegível a custeio, Proagro e seguro rural.",
@@ -445,6 +447,20 @@ def _alerta_solo(alerta: str, informou_compactacao: bool = False) -> str:
     return f"{acao}: {detalhe}"
 
 
+def _frase_extremos(r: dict) -> str:
+    """T7: chance de chuva extrema ou queda brusca de temperatura nas fases sensíveis do ciclo."""
+    pe, pc, pq = r.get("p_extremo"), r.get("p_chuva_extrema"), r.get("p_queda_brusca")
+    if pe == 0:
+        return "nenhum extremo de chuva ou frio nas fases sensíveis do ciclo desde 2001"
+    detalhe = []
+    if pc:
+        detalhe.append(f"chuva extrema {_pct(pc)}")
+    if pq:
+        detalhe.append(f"queda brusca de temperatura {_pct(pq)}")
+    return (f"extremo climático em {_pct(pe)} dos anos nas fases sensíveis do ciclo"
+            + (f" ({', '.join(detalhe)})" if detalhe else ""))
+
+
 def _justificativas_do_local(r: dict, e: Entrada | None) -> list[str]:
     """Data informada (clima, água, ZARC) e região (solo), ancoradas no que o produtor escolheu."""
     m = []
@@ -465,6 +481,8 @@ def _justificativas_do_local(r: dict, e: Entrada | None) -> list[str]:
     if s2 is not None:
         falta = r.get("irrigacao_mm") or 0
         partes.append("baixo risco de faltar água" if s2 >= 0.85 else f"faltam em média {falta:.0f} mm de água no ciclo")
+    if (pe := r.get("p_extremo")) is not None:
+        partes.append(_frase_extremos(r))
     z = r.get("zarc_status")
     if z == "indicado":
         partes.append(f"indicada pelo zoneamento oficial (risco de até {r.get('risco_zarc_pct')}%)")
@@ -544,7 +562,7 @@ def _recomendacao_de_linha(r: dict, cat: dict, e: Entrada | None = None, ctx: di
 
 
 def motor_modelo(e: Entrada, dados: dict) -> Resultado:
-    """Recomendador real: as seis torres (towers/) combinadas e ordenadas em três setores."""
+    """Recomendador real: as sete torres (towers/) combinadas e ordenadas em três setores."""
     import polars as pl
     from towers.combinador import recomendar
     from towers.data.culturas import carregar_culturas
@@ -583,7 +601,7 @@ def motor_modelo(e: Entrada, dados: dict) -> Resultado:
         t = t2.row(0, named=True)
         obs.append(f"Água no solo em {t['data_estado_solo']:%d/%m/%Y}: {_pct(t['agua_solo_hoje'])} da capacidade "
                    f"(NASA POWER); solo {t['classe_ad']} pela textura do SoilGrids.")
-    obs.append(f"{rec.ranking.height} culturas avaliadas por clima, água, solo, zoneamento, rotação e regras de crédito.")
+    obs.append(f"{rec.ranking.height} culturas avaliadas por clima, água, solo, zoneamento, rotação, extremos climáticos e regras de crédito.")
     # torres fora da nota (timeout/erro) são log de execução, não aviso ao produtor
     for torre, motivo in (getattr(rec, "torres_ausentes", None) or {}).items():
         log.warning("Recomendação %s-%s: torre %s fora da nota (%s)", e.cidade, e.uf, torre, motivo)
@@ -597,7 +615,7 @@ def motor_modelo(e: Entrada, dados: dict) -> Resultado:
                           "plantio": r["plantio"], "ciclo_dias": r.get("ciclo_dias"), "eliminada": r["eliminada"],
                           "nota": r["score_final"], "aptidao_local": r.get("score_agronomico"),
                           "aderencia": r.get("aderencia"), "desejada": bool(r.get("desejada")),
-                          **{t: r.get(f"s_{t}") for t in ("t1", "t2", "t3", "t4", "t5")}})
+                          **{t: r.get(f"s_{t}") for t in ("t1", "t2", "t3", "t4", "t5", "t7")}})
     detalhes = {"geocodigo": mun["geocodigo"], "notas": notas}
     return Resultado(recomendadas=conv(rec.setores["melhores"]), razoaveis=conv(rec.setores["intermediarias"]),
                      nao_recomendadas=conv(rec.setores["piores"]), fonte="modelo", observacoes=obs,

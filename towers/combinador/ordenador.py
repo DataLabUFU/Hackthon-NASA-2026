@@ -14,7 +14,8 @@ from __future__ import annotations
 import polars as pl
 
 LIMIAR_FORTE, LIMIAR_FRACO = 0.8, 0.5
-NOMES_TORRES = {"t1": "clima", "t2": "água", "t3": "solo", "t4": "zoneamento (ZARC)", "t5": "rotação"}
+NOMES_TORRES = {"t1": "clima", "t2": "água", "t3": "solo", "t4": "zoneamento (ZARC)", "t5": "rotação",
+                "t7": "extremos climáticos"}
 
 
 def melhor_por_cultura(comb: pl.DataFrame) -> pl.DataFrame:

@@ -1,4 +1,4 @@
-"""Recomendador: roda as seis torres, combina os scores e devolve os setores.
+"""Recomendador: roda as sete torres (T1–T7), combina os scores e devolve os setores.
 
     from towers.combinador import recomendar
     rec = recomendar(lat=-23.3, lon=-51.2, data_plantio=date(2026, 11, 20), cultura_desejada="Soja",
@@ -31,6 +31,7 @@ from towers.t4_zarc import avaliar_t4
 from towers.t5_rotacao import avaliar_t5
 from towers.t5_rotacao.torre import resolver_cultura
 from towers.t6_elegibilidade import avaliar_t6
+from towers.t7_extremos.torre import avaliar_t7
 
 from .combinador import combinar
 from .ordenador import localizar, ordenar, setores
@@ -100,8 +101,8 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
     plantios = [data_plantio + timedelta(days=d) for d in DESLOCAMENTOS_PADRAO]
 
     # As torres rodam em paralelo, cada uma com prazo de ``timeout_torre_s``. Quem não responde (ou falha)
-    # fica fora da nota (neutra no combinador). O clima da POWER, usado por T1 e T2, conta no prazo delas.
-    executor = ThreadPoolExecutor(max_workers=7, thread_name_prefix="torre")
+    # fica fora da nota (neutra no combinador). O clima da POWER, usado por T1, T2 e T7, conta no prazo delas.
+    executor = ThreadPoolExecutor(max_workers=8, thread_name_prefix="torre")
     f_clima = executor.submit(clima_diario, lat, lon, params=PARAMS_T2)
     # solo (SoilGrids → classe AD do ZARC) buscado uma vez para T2, T4 e T6; sem resposta, cada uma usa
     # o seu padrão (T2: AD4; T4/T6: melhor solo do ZARC) e continua contribuindo com a nota
@@ -124,6 +125,7 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
         "t5": lambda: avaliar_t5(ultimo, penultimo, catalogo_historico=catalogo.filter("exibivel"), **comum),
         "t6": lambda: avaliar_t6(lat, lon, data_plantio, geocodigo=geocodigo, imovel=imovel, irrigado=irrigado,
                                  solo=solo_compartilhado(), **comum),
+        "t7": lambda: avaliar_t7(lat, lon, data_plantio, clima=f_clima.result(), **comum),
     }
     inicio = time.perf_counter()
     futuros = {nome: executor.submit(f) for nome, f in tarefas.items()}
@@ -143,7 +145,7 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
     executor.shutdown(wait=False, cancel_futures=True)   # torres atrasadas seguem em segundo plano, ignoradas
 
     t1 = saidas["t1"] if saidas["t1"] is not None else base_sem_t1(culturas, plantios)
-    t2, t3, t4, t5, t6 = (saidas[n] for n in ("t2", "t3", "t4", "t5", "t6"))
+    t2, t3, t4, t5, t6, t7 = (saidas[n] for n in ("t2", "t3", "t4", "t5", "t6", "t7"))
 
     kw = {} if peso_evidencia is None else {"peso_evidencia": peso_evidencia}
     ader = None
@@ -155,7 +157,7 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
             except ValueError:
                 historico.append(None)
         ader = aderencia(culturas, beneficios, historico)
-    comb = combinar(t1, t2, t3, t4, t5, t6, objetivo=objetivo, somente_financiaveis=somente_financiaveis,
+    comb = combinar(t1, t2, t3, t4, t5, t6, t7, objetivo=objetivo, somente_financiaveis=somente_financiaveis,
                     extras=extras, pesos=pesos, aderencia=ader, desejada=desejada_nome, **kw)
     ranking = ordenar(comb)
     sets = setores(ranking, top_n=top_n, universo_piores=universo_piores)

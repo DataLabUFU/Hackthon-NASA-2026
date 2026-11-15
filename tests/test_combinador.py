@@ -64,7 +64,8 @@ def test_torre_extra_plugavel():
     t1 = t1_([("a", "A", D1, 1.0, 1.0, True)])
     extremos = pl.DataFrame({"id_cultura": ["a"], "plantio": [D1], "score_extremos": [0.5]})
     r = combinar(t1, extras={"extremos": (extremos, 0.25)}, peso_evidencia=0).row(0, named=True)
-    assert r["score_final"] == pytest.approx(math.exp(0.25 * math.log(0.5) / (0.25 + 0.25)))
+    w1 = OBJETIVOS["equilibrado"]["pesos"]["t1"]
+    assert r["score_final"] == pytest.approx(math.exp(0.25 * math.log(0.5) / (w1 + 0.25)))
 
 
 # --- ordenador ---------------------------------------------------------------------------------
