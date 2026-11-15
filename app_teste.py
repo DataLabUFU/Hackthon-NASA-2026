@@ -6,11 +6,12 @@ O modelo real (seis torres em towers/) é o padrão quando os dados existem; for
 
 Este arquivo é autossuficiente no visual: não depende de .streamlit/config.toml.
 """
+import base64
+import json
 import logging
 from datetime import date
 from html import escape
 
-import pandas as pd
 import streamlit as st
 
 import motor as mt
@@ -333,6 +334,7 @@ def coletar_entrada():
             "Estado",
             estados_ordenados,
             index=None,
+            key="f_uf",
             placeholder="Selecione o estado",
             format_func=lambda u: mt.ESTADOS[u][0]
         )
@@ -358,6 +360,7 @@ def coletar_entrada():
             "Penúltimo plantio",
             culturas_historico,
             index=None,
+            key="f_penultimo",
             placeholder="Selecione a cultura"
         )
 
@@ -365,6 +368,7 @@ def coletar_entrada():
             "Último plantio",
             culturas_historico,
             index=None,
+            key="f_ultimo",
             placeholder="Selecione a cultura"
         )
 
@@ -376,7 +380,8 @@ def coletar_entrada():
             "Data prevista para a próxima plantação",
             value=None,
             min_value=date.today(),
-            format="DD/MM/YYYY"
+            format="DD/MM/YYYY",
+            key="f_data",
         )
 
         culturas_desejadas = [
@@ -388,7 +393,8 @@ def coletar_entrada():
         desejada = c6.selectbox(
             "Qual cultura deseja plantar?",
             culturas_desejadas,
-            index=0
+            index=0,
+            key="f_desejada",
         )
 
         secao("04", "Problemas identificados na área")
@@ -403,7 +409,8 @@ def coletar_entrada():
             "Tipos de cultura que você considera plantar (vazio = todos)",
             list(mt.TIPOS_CULTURA),
             format_func=lambda t: mt.TIPOS_CULTURA[t],
-            placeholder="Todos os tipos"
+            placeholder="Todos os tipos",
+            key="f_tipos",
         )
 
         st.write("")
@@ -433,9 +440,17 @@ def coletar_entrada():
 
 
 # ------------------------------------------------------------------ exibição (Resultado -> HTML)
+def html_motivo(m: str) -> str:
+    """Destaca a informação do produtor a que a frase responde ("Seu objetivo “…”: resposta")."""
+    ancora, sep, resto = m.partition(": ")
+    if sep and len(ancora) <= 90:
+        return f"<strong>{escape(ancora)}:</strong> {escape(resto)}"
+    return escape(m)
+
+
 def html_card(rec, posicao: int, cor: str, titulo_motivos: str) -> str:
     rotulo = f"{posicao}º LUGAR" + (" - MAIS RECOMENDADA" if cor == "verde" and posicao == 1 else "")
-    motivos = "".join(f"<li>{escape(m)}</li>" for m in rec.motivos)
+    motivos = "".join(f"<li>{html_motivo(m)}</li>" for m in rec.motivos)
     c = rec.clima
     clima = "".join(f"<p>{r}: <strong>{escape(v)}</strong></p>" for r, v in (
         ("Temperatura ideal", c.temperatura), ("Chuva", c.chuva), ("Época", c.epoca), ("Adaptação", c.adaptacao)))
@@ -469,19 +484,109 @@ def mostrar_resultado(e: mt.Entrada, resultado: mt.Resultado):
         coluna.markdown(f'<div class="grupo-titulo grupo-{cor}">{titulo}</div>{cards}', unsafe_allow_html=True)
 
 
-def mostrar_estatisticas(e: mt.Entrada):
-    est = mt.obter_estatisticas(e)
-    df = pd.DataFrame({"Chuva (mm)": est["chuva_mm"], "Temperatura média (°C)": est["temp_c"]}, index=est["meses"])
-    secao("", f"Estatísticas da região: {e.cidade} - {e.uf}")
-    c1, c2 = st.columns(2)
-    c1.markdown("**Chuva média mensal (mm)**")
-    c1.bar_chart(df["Chuva (mm)"])
-    c2.markdown("**Temperatura média mensal (°C)**")
-    c2.line_chart(df["Temperatura média (°C)"])
+def mostrar_estatisticas(e: mt.Entrada, resultado: mt.Resultado | None):
+    """Painel em largura total; os dados ficam guardados enquanto a entrada e o resultado não mudam."""
+    import estatisticas
+    import painel_estatisticas
+    chave = (e.uf, e.cidade, e.data_plantio, id(resultado))
+    guardado = st.session_state.get("painel")
+    if not guardado or guardado[0] != chave:
+        with st.spinner("Carregando os dados da região..."):
+            guardado = (chave, estatisticas.painel(e, resultado))
+        st.session_state["painel"] = guardado
+    painel_estatisticas.mostrar(guardado[1])
 
 
 def alternar_estatisticas():
     st.session_state["stats"] = not st.session_state.get("stats", False)
+    if st.session_state["stats"]:
+        st.query_params["stats"] = "1"
+    else:
+        st.query_params.pop("stats", None)
+
+
+
+# ------------------------------------------------------------------ memória entre recarregamentos
+# O Streamlit abre uma sessão nova a cada F5. As marcações ficam na URL (st.query_params), e a resposta fica no
+# cache do servidor (st.cache_data), chaveada pela entrada: ao recarregar, o formulário e as recomendações voltam
+# sem recalcular. O link também serve para compartilhar a consulta.
+SEP = "|"
+
+
+def codificar_entrada(e: mt.Entrada) -> str:
+    texto = json.dumps(e.para_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return base64.urlsafe_b64encode(texto.encode("utf-8")).decode("ascii").rstrip("=")
+
+
+def decodificar_entrada(codigo: str) -> mt.Entrada | None:
+    try:
+        d = json.loads(base64.urlsafe_b64decode(codigo + "=" * (-len(codigo) % 4)).decode("utf-8"))
+        d["data_plantio"] = date.fromisoformat(d["data_plantio"]) if d.get("data_plantio") else None
+        campos = set(mt.Entrada.__dataclass_fields__)
+        return mt.Entrada(**{k: v for k, v in d.items() if k in campos})
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl="12h", max_entries=256, show_spinner=False)
+def gerar_com_cache(codigo: str) -> mt.Resultado:
+    """Resultado por entrada (compartilhado entre sessões; o clima da NASA muda no máximo uma vez por dia)."""
+    return mt.gerar_recomendacoes(decodificar_entrada(codigo))
+
+
+def restaurar_da_url() -> None:
+    """Na primeira execução da sessão, devolve ao formulário (e ao resultado) o que estava na URL."""
+    if st.session_state.get("_restaurado"):
+        return
+    st.session_state["_restaurado"] = True
+    q = st.query_params
+    uf = q.get("uf")
+    if uf in mt.ESTADOS:
+        st.session_state["f_uf"] = uf
+        if q.get("cidade") in mt.ESTADOS[uf][1]:
+            st.session_state[f"cidade_{uf}"] = q["cidade"]
+    for param, chave in (("pen", "f_penultimo"), ("ult", "f_ultimo")):
+        if q.get(param) in mt.CULTURAS_HISTORICO:
+            st.session_state[chave] = q[param]
+    try:
+        d = date.fromisoformat(q.get("data", ""))
+        if d >= date.today():               # data que já passou não volta (o campo não aceita)
+            st.session_state["f_data"] = d
+    except ValueError:
+        pass
+    if q.get("des") in mt.CULTURAS_DESEJADAS:
+        st.session_state["f_desejada"] = q["des"]
+    for param, prefixo, opcoes in (("prob", "prob", mt.PROBLEMAS), ("obj", "obj", mt.OBJETIVOS)):
+        for valor in q.get(param, "").split(SEP):
+            if valor in opcoes:
+                st.session_state[f"{prefixo}_{valor}"] = True
+    tipos = [t for t in q.get("tipos", "").split(SEP) if t in mt.TIPOS_CULTURA]
+    if tipos:
+        st.session_state["f_tipos"] = tipos
+    if q.get("stats") == "1":
+        st.session_state["stats"] = True
+    codigo = q.get("r")
+    e = decodificar_entrada(codigo) if codigo else None
+    if e is not None:
+        try:
+            with st.spinner("Recuperando suas recomendações..."):
+                st.session_state.update(entrada_res=e, resultado=gerar_com_cache(codigo))
+        except Exception:                   # dados mudaram ou entrada inválida: o produtor gera de novo
+            st.query_params.pop("r", None)
+
+
+def salvar_na_url(e: mt.Entrada) -> None:
+    """Escreve as marcações atuais na URL (só o que mudou; não dispara nova execução)."""
+    novo = {"uf": e.uf, "cidade": e.cidade, "pen": e.penultimo, "ult": e.ultimo,
+            "data": e.data_plantio.isoformat() if e.data_plantio else None,
+            "des": e.cultura_desejada, "prob": SEP.join(e.problemas), "obj": SEP.join(e.objetivos),
+            "tipos": SEP.join(e.tipos_cultura)}
+    for k, v in novo.items():
+        if v:
+            if st.query_params.get(k) != v:
+                st.query_params[k] = v
+        elif k in st.query_params:
+            del st.query_params[k]
 
 
 # ------------------------------------------------------------------ página
@@ -496,7 +601,9 @@ with st.container(key="conteudo"):
                 '<div class="pagina-sub">Informe as condições da sua área e receba recomendações de culturas '
                 'considerando o histórico, os objetivos e o clima.</div></div>', unsafe_allow_html=True)
 
+    restaurar_da_url()
     entrada, clicou = coletar_entrada()
+    salvar_na_url(entrada)
 
     if clicou:
         faltam = mt.validar_entrada(entrada)
@@ -505,9 +612,10 @@ with st.container(key="conteudo"):
         else:
             try:
                 with st.spinner("Gerando recomendações..."):
-                    resultado = mt.gerar_recomendacoes(entrada)
+                    resultado = gerar_com_cache(codificar_entrada(entrada))
                 # guarda uma "foto" da entrada: o resultado só muda quando o produtor gerar de novo
                 st.session_state.update(entrada_res=entrada, resultado=resultado)
+                st.query_params["r"] = codificar_entrada(entrada)
             except Exception as erro:
                 st.error(f"Não foi possível gerar as recomendações: {erro}")
 
@@ -539,8 +647,10 @@ with st.container(key="faixa_stats"):
             on_click=alternar_estatisticas
         )
 
-        if st.session_state.get("stats"):
-            mostrar_estatisticas(st.session_state["entrada_res"])
+
+# painel em largura total, abaixo da faixa (dentro da coluna do botão ficava espremido)
+if st.session_state.get("stats"):
+    mostrar_estatisticas(st.session_state.get("entrada_res", entrada), st.session_state.get("resultado"))
 
 fontes_dados = ("<br>Dados: NASA POWER (clima e umidade do solo), SoilGrids, ECOCROP/FAO e ZARC/MAPA. "
                 "Confirme as condições de crédito com sua instituição financeira." if mt.DADOS_REAIS

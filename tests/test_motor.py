@@ -83,8 +83,8 @@ def test_card_de_cultura_recomendada():
     assert "20/11/2026" in r.descricao and "150 dias" in r.descricao and "89/100" in r.descricao
     assert "Elegível a crédito" in r.descricao and "Grãos" in r.descricao
     texto = " | ".join(r.motivos)
-    assert "Clima favorável" in texto and "faltam em média 73 mm" in texto and "Calagem" in texto
-    assert "ZARC), risco de 20%" in texto and "Rotação: Gramínea após leguminosa (+0.15)" in texto
+    assert "No plantio em 20/11: clima muito favorável; faltam em média 73 mm de água no ciclo" in texto
+    assert "indicada pelo zoneamento oficial (risco de até 20%)" in texto and "pH 5.2 abaixo do ideal, corrigível com calagem" in texto
     assert "Port.344 de 06-08-2026" in texto
     assert r.clima.temperatura == "18°C a 33°C (faixa ótima)" and r.clima.chuva == "600 a 1200 mm (faixa ótima)"
     assert r.clima.epoca == "20/11; também bom: 10/11" and r.clima.adaptacao == "Apta em 100% dos anos (NASA POWER)"
@@ -96,7 +96,7 @@ def test_card_de_cultura_eliminada_e_sem_dados():
                                         status_elegibilidade="inelegivel", explicacao_rotacao=None, alertas_solo=None,
                                         ciclo_dias=None), {})
     assert r.motivos[0] == "Não indicada: clima inapto (T1: geada)."
-    assert any("Fora da janela do zoneamento" in m for m in r.motivos)
+    assert any("fora da janela do zoneamento oficial" in m for m in r.motivos)
     assert "ciclo" not in r.descricao and "Fora das regras de crédito" in r.descricao
     assert r.clima.temperatura == "—" and r.clima.adaptacao == "—"
 

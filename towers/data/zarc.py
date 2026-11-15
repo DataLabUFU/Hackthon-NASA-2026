@@ -128,9 +128,27 @@ def baixar_zarc(safras: Iterable[int] | None = None, destino: Path | str = CAMIN
 
 # --- consulta ----------------------------------------------------------------------------------
 
+def zarc_disponivel(caminho: Path | str = CAMINHO_PADRAO) -> bool:
+    """Há tábua para consultar: o parquet local ou, no caminho padrão, o NeonDB."""
+    if Path(caminho).exists():
+        return True
+    from . import neon
+    return Path(caminho) == CAMINHO_PADRAO and neon.habilitado()
+
+
 def tabua(geocodigos: Iterable[str] | None = None, caminho: Path | str = CAMINHO_PADRAO,
           incluir_irrigado: bool = False) -> pl.LazyFrame:
-    """Linhas da safra vigente de cada cultura, com ``id_cultura`` e ``irrigado``."""
+    """Linhas da safra vigente de cada cultura, com ``id_cultura`` e ``irrigado``.
+
+    Sem o parquet local (ex.: Streamlit Cloud), as linhas dos ``geocodigos`` vêm do NeonDB (já na safra vigente).
+    """
+    if not Path(caminho).exists() and geocodigos is not None:
+        from . import neon
+        if Path(caminho) == CAMINHO_PADRAO and neon.habilitado():
+            df = neon.zarc_linhas(geocodigos)
+            if df is not None:
+                lf = df.lazy()
+                return lf if incluir_irrigado else lf.filter(~pl.col("irrigado"))
     lf = pl.scan_parquet(caminho)
     nomes = lf.collect_schema().names()
     manejo = pl.col("Nome_Outros_Manejos") if "Nome_Outros_Manejos" in nomes else pl.lit(None, pl.String)
@@ -176,7 +194,7 @@ def indicacao_por_decendio(geocodigos: Iterable[str] | None = None, caminho: Pat
 
 def indicadas_para(geocodigo: str, plantios: Iterable[date], caminho: Path | str = CAMINHO_PADRAO) -> set[tuple[str, date]]:
     """Pares (id_cultura, plantio) indicados pelo ZARC no município (para suprimir alertas)."""
-    if not Path(caminho).exists():
+    if not zarc_disponivel(caminho):
         return set()
     ind = indicacao_por_decendio([geocodigo], caminho).filter("indicado")
     por_dec: dict[int, list[str]] = {}

@@ -35,6 +35,7 @@ from towers.t6_elegibilidade import avaliar_t6
 from .combinador import combinar
 from .ordenador import localizar, ordenar, setores
 from .pesos import OBJETIVOS
+from .preferencias import aderencia
 
 log = logging.getLogger(__name__)
 
@@ -77,8 +78,11 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
                peso_evidencia: float | None = None, pesos: dict[str, float] | None = None,
                universo_piores: pl.Expr | None = None,
                extras: dict[str, tuple[pl.DataFrame, float]] | None = None,
-               timeout_torre_s: float = TIMEOUT_TORRE_S) -> Recomendacao:
-    """``tipos_cultura``: o que o produtor considera plantar (chaves de ``TIPOS_CULTURA``); None = todos.
+               timeout_torre_s: float = TIMEOUT_TORRE_S,
+               beneficios: dict[str, float] | None = None) -> Recomendacao:
+    """``beneficios``: o que o produtor quer ganhar ou resolver {código de ``preferencias.BENEFICIOS``: peso};
+    vira a aderência de cada cultura, que pesa na nota (e a cultura desejada ganha bônus).
+    ``tipos_cultura``: o que o produtor considera plantar (chaves de ``TIPOS_CULTURA``); None = todos.
     A cultura desejada é sempre avaliada, mesmo fora dos tipos escolhidos.
     ``timeout_torre_s``: prazo de cada torre; a que não responder fica fora da nota (``torres_ausentes``)."""
     if objetivo not in OBJETIVOS:
@@ -142,14 +146,23 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
     t2, t3, t4, t5, t6 = (saidas[n] for n in ("t2", "t3", "t4", "t5", "t6"))
 
     kw = {} if peso_evidencia is None else {"peso_evidencia": peso_evidencia}
+    ader = None
+    if beneficios:
+        historico = []
+        for nome in (ultimo, penultimo):
+            try:
+                historico.append(resolver_cultura(nome, catalogo.filter("exibivel")))
+            except ValueError:
+                historico.append(None)
+        ader = aderencia(culturas, beneficios, historico)
     comb = combinar(t1, t2, t3, t4, t5, t6, objetivo=objetivo, somente_financiaveis=somente_financiaveis,
-                    extras=extras, pesos=pesos, **kw)
+                    extras=extras, pesos=pesos, aderencia=ader, desejada=desejada_nome, **kw)
     ranking = ordenar(comb)
     sets = setores(ranking, top_n=top_n, universo_piores=universo_piores)
     desejada = localizar(ranking, desejada_nome, sets) if desejada_nome else None
     entrada = dict(lat=lat, lon=lon, geocodigo=geocodigo, data_plantio=data_plantio, cultura_desejada=desejada_nome,
                    ultimo=ultimo, penultimo=penultimo, problemas_solo=list(problemas_solo), objetivo=objetivo,
-                   irrigado=irrigado, top_n=top_n, tipos_cultura=tipos_cultura)
+                   irrigado=irrigado, top_n=top_n, tipos_cultura=tipos_cultura, beneficios=beneficios)
     log.info("Recomendação: %d culturas ranqueadas; tempos %s; fora da nota: %s", ranking.height, tempos, ausentes)
     return Recomendacao(ranking, sets, desejada, objetivo, entrada, tempos, comb,
                         {n: v for n, v in saidas.items() if v is not None}, ausentes)

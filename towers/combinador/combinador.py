@@ -9,6 +9,9 @@
 - Objetivo "estabilidade": T1 usa o P20 (pior ano típico) e T2 usa 1 − P(perda > 20%).
 - Peso da evidência (``peso_evidencia``, padrão 0,1): o score é multiplicado por um fator de 0,9 a 1,0
   conforme a cobertura de torres e a qualidade dos parâmetros (ver ``pesos.py``).
+- Aderência ao produtor (``aderencia``, de ``preferencias.aderencia``): multiplica por
+  1 − ``peso_aderencia`` × (1 − aderência) (0,6 a 1,0 com o padrão). ``score_agronomico`` guarda a nota antes dela.
+- Cultura desejada (``desejada``, nome exibido): nota + ``bonus_desejada`` × (1 − nota), se não eliminada.
 
 Entradas: as saídas das torres sem colapsar variantes. T1, T2, T4 e T6 são por (id_cultura, plantio);
 T3 e T5 são por id_cultura. ``extras`` permite plugar outras torres (ex.: a de extremos de temperatura):
@@ -19,13 +22,16 @@ from __future__ import annotations
 import polars as pl
 
 from .pesos import OBJETIVOS, PESO_COBERTURA, PESO_EVIDENCIA, PISO_SCORE
+from .preferencias import BONUS_DESEJADA, PESO_ADERENCIA
 
 
 def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame | None = None,
              t4: pl.DataFrame | None = None, t5: pl.DataFrame | None = None, t6: pl.DataFrame | None = None,
              objetivo: str = "equilibrado", somente_financiaveis: bool | None = None,
              extras: dict[str, tuple[pl.DataFrame, float]] | None = None,
-             peso_evidencia: float = PESO_EVIDENCIA, pesos: dict[str, float] | None = None) -> pl.DataFrame:
+             peso_evidencia: float = PESO_EVIDENCIA, pesos: dict[str, float] | None = None,
+             aderencia: pl.DataFrame | None = None, peso_aderencia: float = PESO_ADERENCIA,
+             desejada: str | None = None, bonus_desejada: float = BONUS_DESEJADA) -> pl.DataFrame:
     """``pesos`` (opcional) sobrescreve os pesos do objetivo (ex.: combinação de vários objetivos do front)."""
     if objetivo not in OBJETIVOS:
         raise ValueError(f"objetivo desconhecido: {objetivo!r} (válidos: {sorted(OBJETIVOS)})")
@@ -91,6 +97,14 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
     ).with_columns(
         fator_confianca=1 - peso_evidencia * (1 - pl.col("evidencia")),
     ).with_columns(score_combinado=pl.col("score_combinado") * pl.col("fator_confianca"))
+    df = df.with_columns(score_agronomico=pl.col("score_combinado"))
+    if aderencia is not None:
+        df = df.join(aderencia, on="id_cultura", how="left").with_columns(
+            fator_aderencia=(1 - peso_aderencia * (1 - pl.col("aderencia"))).fill_null(1.0))
+    else:
+        df = df.with_columns(aderencia=pl.lit(None, pl.Float64), fator_aderencia=pl.lit(1.0))
+    df = df.with_columns(score_combinado=pl.col("score_combinado") * pl.col("fator_aderencia"),
+                         desejada=pl.col("nome_pt") == pl.lit(desejada) if desejada else pl.lit(False))
 
     eliminada = ~pl.col("gate_t1")
     motivo = pl.when(~pl.col("gate_t1")).then(pl.concat_str(pl.lit("clima inapto (T1: "), pl.col("fator_limitante"), pl.lit(")")))
@@ -100,6 +114,8 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
     return df.with_columns(
         eliminada=eliminada,
         motivo_eliminacao=motivo.otherwise(None),
-        score_final=pl.when(eliminada).then(0.0).otherwise(pl.col("score_combinado")),
+        score_final=pl.when(eliminada).then(0.0)
+        .when(pl.col("desejada")).then(pl.col("score_combinado") + bonus_desejada * (1 - pl.col("score_combinado")))
+        .otherwise(pl.col("score_combinado")),
         objetivo=pl.lit(objetivo),
     )

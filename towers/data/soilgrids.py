@@ -2,6 +2,10 @@
 
 API: https://rest.isric.org/soilgrids/v2.0/docs (sem chave). Resolução de 250 m.
 
+Primeiro se consulta a grade pré-calculada do Brasil (``soilgrids_grade``, 0,01°, mesmos cálculos, a partir dos
+mapas de 1 km da ISRIC): resposta instantânea e sem depender da API. A API (com cache por ponto) fica para
+pontos fora da grade ou quando ela não está disponível.
+
 - ``textura``: areia/silte/argila (%), média ponderada 0–60 cm (usada pela T2 e pela T3).
 - ``quimica``: pH em água, CTC a pH 7 (cmol(c)/kg), carbono orgânico (g/kg) e densidade (g/cm³), 0–30 cm.
 - ``classe_wrb``: classe de solo WRB mais provável e as 3 primeiras com probabilidade (%).
@@ -91,9 +95,21 @@ def consultar_classe(lat: float, lon: float, sessao: requests.Session | None = N
 def _com_vizinhos(nome: str, lat: float, lon: float, cache_dir: Path | str, consulta: Callable) -> dict | None:
     """Consulta o ponto (ou o vizinho válido mais próximo) com cache por tipo de consulta."""
     cache_dir = Path(cache_dir)
+    no_padrao = cache_dir == Path(CACHE_PADRAO)
+    if no_padrao and consulta is _CONSULTA_PADRAO.get(nome):
+        from . import soilgrids_grade
+        coberto, dados = soilgrids_grade.consultar(nome, lat, lon)
+        if coberto:
+            return dados
     arquivo = cache_dir / f"{nome}_{lat:+.3f}_{lon:+.3f}.json"
     if arquivo.exists():
         return json.loads(arquivo.read_text(encoding="utf-8")) or None
+    if no_padrao:
+        from . import neon
+        achou, dados = neon.ler_soilgrids(nome, lat, lon)
+        if achou:
+            _gravar(arquivo, dados)
+            return dados
     candidatos = [(0.0, lat, lon)] + [
         (r, lat + dy * r, lon + dx * r) for r in RAIOS for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))
     ]
@@ -114,11 +130,20 @@ def _com_vizinhos(nome: str, lat: float, lon: float, cache_dir: Path | str, cons
             break
     if resultado is None:
         log.warning("SoilGrids (%s): sem dado em até %.2f° de (%.3f, %.3f)", nome, RAIOS[-1], lat, lon)
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    tmp = arquivo.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")   # escrita atômica (torres em paralelo)
-    tmp.write_text(json.dumps(resultado or {}), encoding="utf-8")
-    os.replace(tmp, arquivo)
+    _gravar(arquivo, resultado)
+    if no_padrao:
+        neon.enviar_soilgrids(nome, lat, lon, resultado)
     return resultado
+
+
+def _gravar(arquivo: Path, dados: dict | None) -> None:
+    arquivo.parent.mkdir(parents=True, exist_ok=True)
+    tmp = arquivo.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")   # escrita atômica (torres em paralelo)
+    tmp.write_text(json.dumps(dados or {}), encoding="utf-8")
+    os.replace(tmp, arquivo)
+
+
+_CONSULTA_PADRAO = {"textura": consultar, "quimica": consultar_quimica, "classe": consultar_classe}
 
 
 def textura(lat: float, lon: float, cache_dir: Path | str = CACHE_PADRAO, consulta=consultar) -> dict | None:

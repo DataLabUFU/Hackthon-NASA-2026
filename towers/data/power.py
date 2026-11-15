@@ -154,6 +154,10 @@ def clima_diario(lat: float, lon: float, inicio: date = INICIO_PADRAO, fim: date
     lat_c, lon_c = celula_grade(lat, lon)
     arquivo = _arquivo_cache(Path(cache_dir), lat_c, lon_c)
 
+    no_padrao = Path(cache_dir) == CACHE_PADRAO
+    if usar_cache and no_padrao and not arquivo.exists():
+        from . import neon
+        neon.ler_power(lat_c, lon_c, PADRAO_HORARIO.lower(), arquivo)
     cache = pl.read_parquet(arquivo) if usar_cache and arquivo.exists() else None
     if cache is not None:
         faltam = [p for p in params if p not in cache.columns]
@@ -187,6 +191,9 @@ def clima_diario(lat: float, lon: float, inicio: date = INICIO_PADRAO, fim: date
         df.write_parquet(tmp)
         os.replace(tmp, arquivo)
         log.info("POWER: cache salvo em %s (%d dias)", arquivo, df.height)
+        if no_padrao:
+            from . import neon
+            neon.enviar_power(lat_c, lon_c, PADRAO_HORARIO.lower(), arquivo, df)
 
     df = df.filter(pl.col("data").is_between(inicio, fim)).select("data", *params)
     df = interpolar_lacunas_curtas(df, params)

@@ -66,6 +66,8 @@ TIPOS_CULTURA = {
 def _carregar_listas():
     """(histórico, desejadas, estados, municípios, dados_reais). Nunca falha: cai nas listas de exemplo."""
     try:
+        from towers.data import neon
+        neon.garantir_arquivos()   # clone novo / Streamlit Cloud: ECOCROP, municípios, PTF e GBIF vêm do banco
         from towers.data.culturas import carregar_culturas
         from towers.data.municipios import carregar_municipios
         from towers.data.taxonomia import CACHE_PADRAO as CACHE_GBIF
@@ -105,7 +107,21 @@ PROBLEMA_PARA_PERFIL = {"Baixa retenção de água": "evitar_seca", "Deficiênci
 # - cada objetivo marcado aponta para um perfil de pesos do combinador (towers/combinador/pesos.py)
 OBJETIVO_PARA_PERFIL = {"Reter água": "evitar_seca", "Aumentar produtividade": "estabilidade",
                         "Acesso a crédito e seguro": "financiamento"}   # os demais: "saude_do_solo"
-PESO_PROBLEMA = 0.5   # um problema relatado pesa metade de um objetivo explícito
+PESO_PROBLEMA = 0.5   # nos pesos das torres, um problema relatado pesa metade de um objetivo explícito
+# - objetivos e problemas viram benefícios que a cultura deve entregar (towers/combinador/preferencias.py):
+#   a aderência pesa direto na nota de cada cultura; objetivo e problema têm o mesmo peso
+OBJETIVO_PARA_BENEFICIO = {
+    "Reduzir compactação": "descompactar", "Reter água": "reter_agua", "Aumentar nitrogênio": "fixar_nitrogenio",
+    "Controlar pragas": "controlar_pragas", "Controlar doenças": "controlar_doencas",
+    "Aumentar matéria orgânica": "materia_organica", "Melhorar estrutura do solo": "estrutura_solo",
+    "Reduzir erosão": "controlar_erosao",
+}   # "Aumentar produtividade" e "Acesso a crédito e seguro" agem pelos pesos e pelo filtro de crédito
+PROBLEMA_PARA_BENEFICIO = {
+    "Compactação do solo": "descompactar", "Baixa retenção de água": "reter_agua",
+    "Deficiência de nitrogênio": "fixar_nitrogenio", "Presença de pragas": "controlar_pragas",
+    "Incidência de doenças": "controlar_doencas", "Baixo teor de matéria orgânica": "materia_organica",
+    "Erosão do solo": "controlar_erosao", "Plantas daninhas": "controlar_daninhas",
+}
 
 
 # ------------------------------------------------------------------ modelos de dados
@@ -151,6 +167,7 @@ class Resultado:
     nao_recomendadas: list = field(default_factory=list)  # vermelho
     fonte: str = "mock"                                   # "mock" ou "modelo"
     observacoes: list = field(default_factory=list)       # notas do modelo exibidas no resumo
+    detalhes: dict = field(default_factory=dict)          # notas por critério e local (painel de estatísticas)
 
     def para_dict(self) -> dict:
         return asdict(self)
@@ -302,12 +319,198 @@ def pesos_da_entrada(e: Entrada) -> tuple[dict, bool]:
     return pesos, "Acesso a crédito e seguro" in e.objetivos
 
 
+def beneficios_da_entrada(e: Entrada) -> dict[str, float]:
+    """{benefício: peso} pedidos pelo produtor (objetivos e problemas marcados, mesmo peso cada)."""
+    pedidos: dict[str, float] = {}
+    for b in [OBJETIVO_PARA_BENEFICIO.get(o) for o in e.objetivos] + [PROBLEMA_PARA_BENEFICIO.get(p) for p in e.problemas]:
+        if b:
+            pedidos[b] = pedidos.get(b, 0.0) + 1.0
+    return pedidos
+
+
+# o que atenderia cada pedido, quando a cultura do cartão não atende
+EXEMPLOS_BENEFICIO = {
+    "fixar_nitrogenio": "leguminosas como crotalária, feijão-guandu, mucuna ou soja",
+    "descompactar": "nabo-forrageiro, braquiária, milheto ou crotalária",
+    "materia_organica": "culturas de muita palhada, como milheto, braquiária, sorgo ou milho",
+    "estrutura_solo": "milheto, braquiária, nabo-forrageiro ou crotalária",
+    "reter_agua": "culturas de muita palhada, como milheto ou braquiária",
+    "controlar_erosao": "plantas de cobertura (milheto, braquiária, crotalária) ou pastagem",
+    "controlar_pragas": "crotalária ou mucuna (reduzem nematoides) ou uma cultura de outra família",
+    "controlar_doencas": "uma cultura de família botânica diferente da última safra",
+    "controlar_daninhas": "braquiária, aveia-preta ou milheto, que abafam as daninhas",
+}
+
+
+def _rotulo(texto: str) -> str:
+    return f"“{texto[:1].lower() + texto[1:]}”"
+
+
+def _resposta_ao_pedido(r: dict, codigo: str) -> str:
+    from towers.combinador.preferencias import BENEFICIOS
+    if codigo in (r.get("beneficios_atendidos") or []):
+        return f"atende, {BENEFICIOS[codigo]}."
+    if codigo in (r.get("beneficios_parciais") or []):
+        return (f"atende em parte ({BENEFICIOS[codigo]}, mas com efeito menor); para resolver de vez, "
+                f"prefira {EXEMPLOS_BENEFICIO[codigo]}.")
+    return f"não ajuda; para isso, prefira {EXEMPLOS_BENEFICIO[codigo]}."
+
+
+def _por_que_diferente(r: dict, d: dict) -> str:
+    """Por que a cultura ``r`` ficou acima ou abaixo da desejada ``d``: aptidão do local x seus pedidos."""
+    ar, ad_ = r.get("score_agronomico"), d.get("score_agronomico")
+    xr, xd = r.get("aderencia"), d.get("aderencia")
+    nome, alvo = r["nome_pt"], d["nome_pt"]
+    fracos = ", ".join(d.get("pontos_fracos") or [])
+    if r.get("eliminada"):
+        return ""
+    if ar is None or ad_ is None:
+        return f"; {alvo} perde em {fracos}" if r["score_final"] > d["score_final"] and fracos else ""
+    if r["score_final"] < d["score_final"]:
+        if ar > ad_ + 0.02 and xr is not None and xd is not None and xr < xd:
+            return (f"; {nome} vai melhor no local (aptidão {100 * ar:.0f} contra {100 * ad_:.0f}), mas atende "
+                    f"menos ao que você pediu, e {alvo} ganhou prioridade por ser a sua escolha")
+        return f"; {alvo} ganhou prioridade por ser a sua escolha" + (
+            "" if ar >= ad_ else f" e vai melhor no local (aptidão {100 * ad_:.0f} contra {100 * ar:.0f})")
+    if ar > ad_ + 0.02:
+        return f"; {alvo} perde no local" + (f" em {fracos}" if fracos else "") +             f" (aptidão {100 * ad_:.0f} contra {100 * ar:.0f} de {nome})"
+    if xr is not None and xd is not None and xr > xd:
+        return f"; {nome} atende melhor ao que você pediu"
+    return ""
+
+
+def _justificativas_do_produtor(r: dict, e: Entrada | None, ctx: dict | None = None) -> list[str]:
+    """Uma frase para cada coisa que o produtor informou, começando por ela (``Âncora: resposta``)."""
+    if e is None:
+        return []
+    ctx = ctx or {}
+    m = []
+    nome = r["nome_pt"]
+    # cultura desejada
+    if r.get("desejada"):
+        m.append(f"Sua cultura desejada ({nome}): " + (
+            "ganhou prioridade no ranking e é viável no local." if not r.get("eliminada")
+            else f"não é indicada aqui nesta época ({r.get('motivo_eliminacao')})."))
+    elif (d := ctx.get("desejada")) and d.get("nome_pt") != nome:
+        if d.get("eliminada"):
+            m.append(f"Sua cultura desejada ({d['nome_pt']}): não é indicada aqui ({d.get('motivo_eliminacao')}); "
+                     f"{nome} é uma alternativa viável.")
+        else:
+            m.append(f"Sua cultura desejada ({d['nome_pt']}): nota {100 * d['score_final']:.0f} contra "
+                     f"{100 * r['score_final']:.0f} de {nome}{_por_que_diferente(r, d)}.")
+    # objetivos e problemas, um a um, com as palavras do produtor
+    for o in e.objetivos:
+        ancora = f"Seu objetivo {_rotulo(OBJETIVOS.get(o, o))}"
+        if (cod := OBJETIVO_PARA_BENEFICIO.get(o)):
+            m.append(f"{ancora}: {_resposta_ao_pedido(r, cod)}")
+        elif o == "Aumentar produtividade" and r.get("s_t1") is not None and not r.get("eliminada"):
+            apta = f", apta em {_pct(r['prob_apta'])} dos anos" if r.get("prob_apta") is not None else ""
+            m.append(f"{ancora}: clima {_qualidade(r['s_t1'])} e água {_qualidade(r.get('s_t2'))} na data "
+                     f"sugerida{apta}.")
+        elif o == "Acesso a crédito e seguro":
+            m.append(f"{ancora}: " + {
+                "elegivel": "dentro do zoneamento oficial (ZARC); elegível a custeio, Proagro e seguro rural.",
+                "condicional": "elegível, desde que o imóvel esteja regularizado.",
+                "inelegivel": "fora das regras de crédito e seguro nesta data.",
+            }.get(r.get("status_elegibilidade") or "", "cultura sem zoneamento oficial; confirme com o banco."))
+    for p in e.problemas:
+        if (cod := PROBLEMA_PARA_BENEFICIO.get(p)):
+            m.append(f"Problema informado {_rotulo(p)}: {_resposta_ao_pedido(r, cod)}")
+    # histórico (rotação)
+    if e.ultimo:
+        hist = f"{e.penultimo} → {e.ultimo}" if e.penultimo else e.ultimo
+        regras = []
+        for exp in (r.get("explicacao_rotacao") or []):
+            regra, _, porque = exp.partition(":")
+            regra = regra.rsplit(" (", 1)[0]                    # tira o ajuste numérico, ex.: "(+0.15)"
+            regras.append(regra[:1].lower() + regra[1:] + (f" ({porque.strip()})" if porque else ""))
+        if regras:
+            m.append(f"Seu histórico ({hist}): {nome} entra como {'; '.join(regras)}.")
+        elif r.get("s_t5") is None:
+            m.append(f"Seu histórico ({hist}): {nome} é perene ou silvicultura; a rotação não se aplica.")
+        else:
+            m.append(f"Seu histórico ({hist}): sem interação forte entre {e.ultimo} e {nome}.")
+    return m
+
+
+def _alerta_solo(alerta: str, informou_compactacao: bool = False) -> str:
+    """'calagem: pH 5.3 abaixo do ideal (5.5–6.5)' → 'pH 5.3 abaixo do ideal (5.5–6.5), corrigível com calagem'."""
+    acao, sep, detalhe = alerta.partition(": ")
+    if not sep:
+        return alerta
+    if acao == "solo compactado":
+        return ("a compactação que você informou pede " if informou_compactacao else "solo compactado pede ") + detalhe
+    if acao in ("calagem", "adubação"):
+        return f"{detalhe}, corrigível com {acao}"
+    return f"{acao}: {detalhe}"
+
+
+def _justificativas_do_local(r: dict, e: Entrada | None) -> list[str]:
+    """Data informada (clima, água, ZARC) e região (solo), ancoradas no que o produtor escolheu."""
+    m = []
+    data = e.data_plantio if e is not None else None
+    if data and r["plantio"] != data:
+        dias = (r["plantio"] - data).days
+        ancora = (f"Na data que você informou ({data:%d/%m}): o melhor plantio é em {r['plantio']:%d/%m}, "
+                  f"{abs(dias)} dias {'depois' if dias > 0 else 'antes'}")
+    elif data:
+        ancora = f"Na data que você informou ({data:%d/%m})"
+    else:
+        ancora = f"No plantio em {r['plantio']:%d/%m}"
+    partes = []
+    s1, s2 = r.get("s_t1"), r.get("s_t2")
+    if s1 is not None:
+        partes.append(f"clima {_qualidade(s1)}" + ("" if s1 >= 0.7 else
+                                                   f" ({LIMITANTE_CLIMA.get(r.get('fator_limitante'), 'clima')})"))
+    if s2 is not None:
+        falta = r.get("irrigacao_mm") or 0
+        partes.append("baixo risco de faltar água" if s2 >= 0.85 else f"faltam em média {falta:.0f} mm de água no ciclo")
+    z = r.get("zarc_status")
+    if z == "indicado":
+        partes.append(f"indicada pelo zoneamento oficial (risco de até {r.get('risco_zarc_pct')}%)")
+    elif z == "nao_indicado":
+        partes.append("fora da janela do zoneamento oficial")
+    if partes:
+        sep = "; " if data and r["plantio"] != data else ": "
+        m.append(f"{ancora}{sep}{'; '.join(partes)}.")
+    if r.get("alerta_ciclo_extremo"):
+        m.append("Para o ciclo nesta data: exige cultivar muito precoce ou tardia.")
+    if r.get("alerta_foto_mensagem"):
+        m.append(r["alerta_foto_mensagem"])
+    lugar = f"Em {e.cidade}-{e.uf}" if e is not None and e.cidade else "No local"
+    s3 = r.get("s_t3")
+    informou_compactacao = e is not None and "Compactação do solo" in e.problemas
+    solo = [_alerta_solo(a, informou_compactacao) for a in (r.get("alertas_solo") or [])[:3]]
+    if s3 is not None and s3 < 0.6 and r.get("fator_limitante_solo"):
+        solo.insert(0, f"solo pouco adequado ({r['fator_limitante_solo']})")
+    if solo:
+        m.append(f"{lugar}: {'; '.join(solo)}.")
+    elif s3 is not None:
+        m.append(f"{lugar}: solo adequado para {r['nome_pt']}.")
+    return m
+
+
+LIMITANTE_CLIMA = {"geada": "risco de geada", "temperatura": "temperatura fora da faixa ideal",
+                   "chuva": "chuva insuficiente ou excessiva no ciclo",
+                   "pegamento": "pouca chuva logo após o plantio (germinação e pegamento)"}
+
+
+def _qualidade(s: float | None) -> str:
+    if s is None:
+        return "sem avaliação"
+    return "muito favorável" if s >= 0.85 else "favorável" if s >= 0.7 else "razoável" if s >= 0.5 else "limitante"
+
+
 def _pct(x) -> str:
     return "—" if x is None else f"{100 * x:.0f}%"
 
 
-def _recomendacao_de_linha(r: dict, cat: dict) -> Recomendacao:
-    """Uma linha do ranking do recomendador -> card do front."""
+def _recomendacao_de_linha(r: dict, cat: dict, e: Entrada | None = None, ctx: dict | None = None) -> Recomendacao:
+    """Uma linha do ranking do recomendador -> card do front.
+
+    Cada justificativa começa pela informação do produtor a que responde ("Seu objetivo “…”: …",
+    "Seu histórico (…)", "Na data que você informou (…)", "Em Cidade-UF: …"). ``ctx``: {"desejada": linha
+    da cultura desejada no ranking}, para comparar as outras culturas com ela."""
     c = cat.get(r["id_cultura"], {})
     ciclo = r.get("ciclo_dias")
     tipo = TIPOS_CULTURA.get(r.get("tipo_cultura") or "", "")
@@ -316,36 +519,19 @@ def _recomendacao_de_linha(r: dict, cat: dict) -> Recomendacao:
             "inelegivel": "Fora das regras de crédito/seguro nesta data.",
             "a_verificar": "Elegibilidade a crédito: a verificar."}.get(r.get("status_elegibilidade") or "", "")
     descricao = (f"Plantio sugerido em {r['plantio']:%d/%m/%Y}" + (f" (ciclo de ~{ciclo} dias)" if ciclo else "")
-                 + f". Nota {100 * r['score_final']:.0f}/100" + (f" · {tipo}" if tipo else "") + f". {eleg}")
+                 + f". Nota {100 * r['score_final']:.0f}/100"
+                 + (f" para o seu caso (aptidão do local {100 * agro:.0f}/100)"
+                    if (agro := r.get("score_agronomico")) is not None and not r.get("eliminada")
+                    and abs(agro - r["score_final"]) >= 0.02 else "")
+                 + (f" · {tipo}" if tipo else "") + f". {eleg}")
 
-    m = []
-    if r.get("eliminada"):
-        m.append(f"Não indicada: {r.get('motivo_eliminacao')}.")
-    s1, s2, s3 = r.get("s_t1"), r.get("s_t2"), r.get("s_t3")
-    if s1 is not None:
-        m.append(f"Clima favorável na época (aptidão {_pct(s1)})." if s1 >= 0.8
-                 else f"Clima limitante: {r.get('fator_limitante')} (aptidão {_pct(s1)}).")
-    if s2 is not None:
-        falta = r.get("irrigacao_mm") or 0
-        m.append("Baixo risco de falta d'água no ciclo." if s2 >= 0.85
-                 else f"Risco hídrico: faltam em média {falta:.0f} mm no ciclo (nota de água {_pct(s2)}).")
-    if s3 is not None and s3 < 0.6 and r.get("fator_limitante_solo"):
-        m.append(f"Solo pouco adequado: {r['fator_limitante_solo']}.")
-    for alerta in (r.get("alertas_solo") or [])[:2]:
-        m.append(alerta[:1].upper() + alerta[1:] + ".")
-    z = r.get("zarc_status")
-    if z == "indicado":
-        m.append(f"Indicada pelo zoneamento oficial (ZARC), risco de {r.get('risco_zarc_pct')}%.")
-    elif z == "nao_indicado":
-        m.append("Fora da janela do zoneamento oficial (ZARC) nesta data.")
-    for exp in (r.get("explicacao_rotacao") or []):
-        m.append("Rotação: " + exp.split(":")[0] + ".")
-    if r.get("status_elegibilidade") == "elegivel" and r.get("portaria_zarc"):
+    m = _justificativas_do_produtor(r, e, ctx)
+    if r.get("eliminada") and not r.get("desejada"):
+        m.insert(1 if ctx and ctx.get("desejada") else 0, f"Não indicada: {r.get('motivo_eliminacao')}.")
+    m += _justificativas_do_local(r, e)
+    credito_no_objetivo = e is not None and "Acesso a crédito e seguro" in e.objetivos
+    if not credito_no_objetivo and r.get("status_elegibilidade") == "elegivel" and r.get("portaria_zarc"):
         m.append(f"Crédito e seguro: dentro do ZARC ({r['portaria_zarc'].replace('_', ' ')}).")
-    if r.get("alerta_foto_mensagem"):
-        m.append(r["alerta_foto_mensagem"])
-    if r.get("alerta_ciclo_extremo"):
-        m.append("Exige cultivar de ciclo muito precoce ou tardio para esta data.")
 
     outras = [d.strftime("%d/%m") for d in (r.get("outras_datas_boas") or []) if d != r["plantio"]]
     clima = Clima(
@@ -368,6 +554,7 @@ def motor_modelo(e: Entrada, dados: dict) -> Resultado:
     if mun is None:
         raise ValueError("Município não encontrado nos dados do IBGE (rode scripts/preparar_dados.py).")
     pesos, so_financiaveis = pesos_da_entrada(e)
+    beneficios = beneficios_da_entrada(e)
     desejada = e.cultura_desejada if e.cultura_desejada not in (None, "Sem preferência", "Outra / Indiferente") else None
     problemas_solo = sorted({PROBLEMA_PARA_SOLO[p] for p in e.problemas if p in PROBLEMA_PARA_SOLO})
 
@@ -375,13 +562,13 @@ def motor_modelo(e: Entrada, dados: dict) -> Resultado:
         mun["lat"], mun["lon"], e.data_plantio, cultura_desejada=desejada,
         ultimo=e.ultimo, penultimo=e.penultimo, problemas_solo=problemas_solo,
         pesos=pesos, somente_financiaveis=so_financiaveis, tipos_cultura=e.tipos_cultura or None,
-        geocodigo=mun["geocodigo"], universo_piores=pl.col("obrigatoria"),
+        geocodigo=mun["geocodigo"], universo_piores=pl.col("obrigatoria"), beneficios=beneficios or None,
     )
     cat = {r["id_cultura"]: r for r in carregar_culturas(usar_gbif=CACHE_GBIF.exists())
            .select("id_cultura", "TOPMN", "TOPMX", "ROPMN", "ROPMX").iter_rows(named=True)}
 
     def conv(df):
-        return [_recomendacao_de_linha(r, cat) for r in df.iter_rows(named=True)]
+        return [_recomendacao_de_linha(r, cat, e, {"desejada": rec.desejada}) for r in df.iter_rows(named=True)]
 
     obs = []
     if rec.desejada:
@@ -400,8 +587,21 @@ def motor_modelo(e: Entrada, dados: dict) -> Resultado:
     # torres fora da nota (timeout/erro) são log de execução, não aviso ao produtor
     for torre, motivo in (getattr(rec, "torres_ausentes", None) or {}).items():
         log.warning("Recomendação %s-%s: torre %s fora da nota (%s)", e.cidade, e.uf, torre, motivo)
+    notas = []
+    for setor, df in [*rec.setores.items(), ("desejada", rec.ranking.filter(pl.col("desejada")) if "desejada"
+                                             in rec.ranking.columns else rec.ranking.clear())]:
+        for r in df.iter_rows(named=True):
+            if setor == "desejada" and any(n["cultura"] == r["nome_pt"] for n in notas):
+                continue
+            notas.append({"setor": setor, "id_cultura": r["id_cultura"], "cultura": r["nome_pt"],
+                          "plantio": r["plantio"], "ciclo_dias": r.get("ciclo_dias"), "eliminada": r["eliminada"],
+                          "nota": r["score_final"], "aptidao_local": r.get("score_agronomico"),
+                          "aderencia": r.get("aderencia"), "desejada": bool(r.get("desejada")),
+                          **{t: r.get(f"s_{t}") for t in ("t1", "t2", "t3", "t4", "t5")}})
+    detalhes = {"geocodigo": mun["geocodigo"], "notas": notas}
     return Resultado(recomendadas=conv(rec.setores["melhores"]), razoaveis=conv(rec.setores["intermediarias"]),
-                     nao_recomendadas=conv(rec.setores["piores"]), fonte="modelo", observacoes=obs)
+                     nao_recomendadas=conv(rec.setores["piores"]), fonte="modelo", observacoes=obs,
+                     detalhes=detalhes)
 
 
 MOTORES: dict = {"mock": motor_mock, "modelo": motor_modelo}   # registre novos motores aqui
