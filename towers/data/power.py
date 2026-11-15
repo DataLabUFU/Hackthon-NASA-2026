@@ -24,6 +24,8 @@ reaproveitam o mesmo arquivo.
 from __future__ import annotations
 
 import logging
+import os
+import threading
 import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -181,7 +183,9 @@ def clima_diario(lat: float, lon: float, inicio: date = INICIO_PADRAO, fim: date
     df = _remover_cauda_vazia(df.unique("data", keep="last").sort("data"), todos)
     if usar_cache and mudou:
         arquivo.parent.mkdir(parents=True, exist_ok=True)
-        df.write_parquet(arquivo)
+        tmp = arquivo.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")   # escrita atômica
+        df.write_parquet(tmp)
+        os.replace(tmp, arquivo)
         log.info("POWER: cache salvo em %s (%d dias)", arquivo, df.height)
 
     df = df.filter(pl.col("data").is_between(inicio, fim)).select("data", *params)

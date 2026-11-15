@@ -13,6 +13,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import threading
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -30,6 +33,10 @@ CAMADAS_0_60 = {"0-5cm": 5, "5-15cm": 10, "15-30cm": 15, "30-60cm": 30}
 CAMADAS_0_30 = {"0-5cm": 5, "5-15cm": 10, "15-30cm": 15}
 # anel de busca quando o ponto não tem dado (graus): ~2, 5 e 10 km
 RAIOS = (0.02, 0.05, 0.1)
+# A API do SoilGrids pode demorar muito: prazo por requisição e orçamento total da busca (com vizinhos).
+# Estourou o orçamento → devolve None sem gravar cache (a próxima consulta tenta de novo).
+TIMEOUT_REQUISICAO_S = 10
+ORCAMENTO_TOTAL_S = 20
 # conversões: valor da API ÷ d_factor → unidade-alvo; ajustes adicionais para as unidades usadas aqui
 NOMES_TEXTURA = {"sand": "areia", "silt": "silte", "clay": "argila"}                      # %
 NOMES_QUIMICA = {"phh2o": "ph", "cec": "ctc", "soc": "carbono_organico", "bdod": "densidade"}
@@ -43,7 +50,8 @@ def consultar_propriedades(lat: float, lon: float, propriedades: tuple[str, ...]
     """
     params = [("lon", lon), ("lat", lat), ("value", "mean")]
     params += [("property", p) for p in propriedades] + [("depth", d) for d in camadas]
-    r = (sessao or requests).get(URL_PROPRIEDADES, params=params, headers={"User-Agent": USER_AGENT}, timeout=60)
+    r = (sessao or requests).get(URL_PROPRIEDADES, params=params, headers={"User-Agent": USER_AGENT},
+                                 timeout=TIMEOUT_REQUISICAO_S)
     r.raise_for_status()
     valores = {}
     for camada in r.json()["properties"]["layers"]:
@@ -71,7 +79,7 @@ def consultar_quimica(lat: float, lon: float, sessao: requests.Session | None = 
 
 def consultar_classe(lat: float, lon: float, sessao: requests.Session | None = None) -> dict | None:
     r = (sessao or requests).get(URL_CLASSE, params={"lon": lon, "lat": lat, "number_classes": 3},
-                                 headers={"User-Agent": USER_AGENT}, timeout=60)
+                                 headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_REQUISICAO_S)
     r.raise_for_status()
     d = r.json()
     if not d.get("wrb_class_name") or d["wrb_class_name"] == "No information":
@@ -89,15 +97,26 @@ def _com_vizinhos(nome: str, lat: float, lon: float, cache_dir: Path | str, cons
         (r, lat + dy * r, lon + dx * r) for r in RAIOS for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))
     ]
     resultado = None
+    inicio = time.perf_counter()
     for dist, la, lo in candidatos:
-        v = consulta(la, lo)
+        if time.perf_counter() - inicio > ORCAMENTO_TOTAL_S:
+            log.warning("SoilGrids (%s): orçamento de %d s esgotado em (%.3f, %.3f); sem dado desta vez",
+                         nome, ORCAMENTO_TOTAL_S, lat, lon)
+            return None
+        try:
+            v = consulta(la, lo)
+        except requests.RequestException as e:
+            log.warning("SoilGrids (%s): falha em (%.3f, %.3f): %s", nome, la, lo, e)
+            return None   # erro de rede: não grava cache, tenta de novo na próxima consulta
         if v is not None:
             resultado = v | {"distancia_graus": dist}
             break
     if resultado is None:
         log.warning("SoilGrids (%s): sem dado em até %.2f° de (%.3f, %.3f)", nome, RAIOS[-1], lat, lon)
     cache_dir.mkdir(parents=True, exist_ok=True)
-    arquivo.write_text(json.dumps(resultado or {}), encoding="utf-8")
+    tmp = arquivo.with_suffix(f".{os.getpid()}.{threading.get_ident()}.tmp")   # escrita atômica (torres em paralelo)
+    tmp.write_text(json.dumps(resultado or {}), encoding="utf-8")
+    os.replace(tmp, arquivo)
     return resultado
 
 

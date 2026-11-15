@@ -394,6 +394,9 @@ def motor_modelo(e: Entrada, dados: dict) -> Resultado:
         obs.append(f"Água no solo em {t['data_estado_solo']:%d/%m/%Y}: {_pct(t['agua_solo_hoje'])} da capacidade "
                    f"(NASA POWER); solo {t['classe_ad']} pela textura do SoilGrids.")
     obs.append(f"{rec.ranking.height} culturas avaliadas por clima, água, solo, zoneamento, rotação e regras de crédito.")
+    nomes = {"t1": "clima", "t2": "água", "t3": "solo", "t4": "zoneamento (ZARC)", "t5": "rotação", "t6": "crédito e seguro"}
+    for torre, motivo in (getattr(rec, "torres_ausentes", None) or {}).items():
+        obs.append(f"A análise de {nomes.get(torre, torre)} ficou fora desta nota ({motivo}).")
     return Resultado(recomendadas=conv(rec.setores["melhores"]), razoaveis=conv(rec.setores["intermediarias"]),
                      nao_recomendadas=conv(rec.setores["piores"]), fonte="modelo", observacoes=obs)
 
