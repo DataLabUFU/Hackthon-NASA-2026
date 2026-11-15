@@ -85,6 +85,29 @@ class Enso:
 
 
 @dataclass
+class Gpd:
+    quantil_limiar: float = 0.95
+    """Limiar u = este quantil da série da safra (por ponto)."""
+    grade_quantis: List[float] = field(default_factory=lambda: [0.90, 0.95, 0.975])
+    r_chuva: int = 3
+    """Dias seguidos abaixo de u que encerram um grupo (>= janela da soma, que é 3)."""
+    r_queda: int = 2
+    repeticoes_bootstrap: int = 200
+    periodos_retorno: List[float] = field(default_factory=lambda: [10.0, 20.0])
+    estabilidade_repeticoes: int = 200
+    estabilidade_fracao: float = 0.85
+    estabilidade_T: float = 10.0
+    criterio_razao: float = 1.5
+    """Reprova a GPD se ela oscilar mais que isso vezes o empírico."""
+    criterio_dp_xi: float = 0.20
+    usar_na_chuva: bool = False
+    """True: na safra out–mar, a chuva extrema usa a GPD nos pontos aprovados."""
+    exigir_concordancia: bool = True
+    """Só usa a GPD se o valor empírico cair dentro do IC dela."""
+    resultado: str = "artifacts/t7/gpd/gpd_por_ponto.csv"
+
+
+@dataclass
 class Limiares:
     chuva_extrema: ChuvaExtrema = field(default_factory=ChuvaExtrema)
     queda_temperatura: QuedaTemperatura = field(default_factory=QuedaTemperatura)
@@ -97,6 +120,7 @@ class ConfigExtremos:
     bootstrap: Bootstrap = field(default_factory=Bootstrap)
     limiares: Limiares = field(default_factory=Limiares)
     enso: Enso = field(default_factory=Enso)
+    gpd: Gpd = field(default_factory=Gpd)
 
 
 def carregar_config(caminho: str | Path | None = None, overrides: list[str] | None = None) -> DictConfig:

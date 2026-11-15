@@ -50,3 +50,19 @@ enso:                      # condicionante; sem tabela de fases = "nao_calculado
   k_status: PROVISORIO
   repeticoes_permutacao: 10000
   fonte: "k = 10: valor inicial sugerido, a confirmar"
+
+gpd:                       # GPD: na safra, substitui o empírico só na chuva (pontos aprovados)
+  quantil_limiar: 0.95     # u = quantil 0,95 da série da safra; ξ estável entre 0,90 e 0,975 no P06
+  grade_quantis: [0.90, 0.95, 0.975]
+  r_chuva: 3               # declustering: 3 dias abaixo de u encerram o grupo (soma é de 3 dias)
+  r_queda: 2
+  repeticoes_bootstrap: 200
+  periodos_retorno: [10.0, 20.0]
+  estabilidade_repeticoes: 200
+  estabilidade_fracao: 0.85
+  estabilidade_T: 10.0
+  criterio_razao: 1.5
+  criterio_dp_xi: 0.20
+  usar_na_chuva: true      # safra out–mar: chuva extrema pela GPD nos pontos aprovados; demais, empírico
+  exigir_concordancia: true   # e só onde o valor empírico cai dentro do IC da GPD
+  resultado: artifacts/t7/gpd/gpd_por_ponto.csv   # gerado por `python -m scripts.t7_gpd`

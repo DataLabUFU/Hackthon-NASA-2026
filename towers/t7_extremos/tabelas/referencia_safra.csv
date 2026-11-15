@@ -1,0 +1,61 @@
+PONTO,LAT,LON,evento,limiar,p_clim,ic_inf,ic_sup,n_anos,flag_p_extremo,janela,status_limiar,metodo,p_empirico,ic_inf_empirico,ic_sup_empirico,motivo_metodo
+P01,-18.5,-48.75,chuva_extrema,> 80.0 mm em 3 dias,0.2971,0.1798,0.4385,21,False,01/10 a 31/03,PROVISORIO,gpd,0.381,0.1818,0.5911,GPD estável e de acordo com o empírico
+P02,-18.5,-48.125,chuva_extrema,> 80.0 mm em 3 dias,0.3333,0.1429,0.55,21,False,01/10 a 31/03,PROVISORIO,empirico,0.3333,0.1429,0.55,GPD reprovada no teste de estabilidade
+P03,-19.0,-50.0,chuva_extrema,> 80.0 mm em 3 dias,0.3387,0.1789,0.4518,21,False,01/10 a 31/03,PROVISORIO,gpd,0.381,0.1818,0.5909,GPD estável e de acordo com o empírico
+P04,-19.0,-49.375,chuva_extrema,> 80.0 mm em 3 dias,0.364,0.2281,0.4853,21,False,01/10 a 31/03,PROVISORIO,gpd,0.381,0.1905,0.609,GPD estável e de acordo com o empírico
+P05,-19.0,-48.75,chuva_extrema,> 80.0 mm em 3 dias,0.3682,0.191,0.4701,21,False,01/10 a 31/03,PROVISORIO,gpd,0.381,0.1818,0.5789,GPD estável e de acordo com o empírico
+P06,-19.0,-48.125,chuva_extrema,> 80.0 mm em 3 dias,0.4762,0.2631,0.6957,21,False,01/10 a 31/03,PROVISORIO,empirico,0.4762,0.2631,0.6957,GPD reprovada no teste de estabilidade
+P07,-19.5,-50.625,chuva_extrema,> 80.0 mm em 3 dias,0.5825,0.4104,0.7235,21,False,01/10 a 31/03,PROVISORIO,gpd,0.5714,0.3806,0.7826,GPD estável e de acordo com o empírico
+P08,-19.5,-50.0,chuva_extrema,> 80.0 mm em 3 dias,0.4836,0.3295,0.5894,21,False,01/10 a 31/03,PROVISORIO,gpd,0.4762,0.2609,0.6958,GPD estável e de acordo com o empírico
+P09,-19.5,-49.375,chuva_extrema,> 80.0 mm em 3 dias,0.3911,0.2774,0.5124,21,False,01/10 a 31/03,PROVISORIO,gpd,0.4762,0.2631,0.6818,GPD estável e de acordo com o empírico
+P10,-19.5,-48.75,chuva_extrema,> 80.0 mm em 3 dias,0.619,0.381,0.8261,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.381,0.8261,valor empírico fora do IC da GPD
+P11,-19.5,-48.125,chuva_extrema,> 80.0 mm em 3 dias,0.466,0.3173,0.6225,21,False,01/10 a 31/03,PROVISORIO,gpd,0.5714,0.3636,0.7826,GPD estável e de acordo com o empírico
+P12,-20.0,-49.375,chuva_extrema,> 80.0 mm em 3 dias,0.5238,0.2857,0.75,21,False,01/10 a 31/03,PROVISORIO,empirico,0.5238,0.2857,0.75,GPD reprovada no teste de estabilidade
+P13,-20.0,-48.75,chuva_extrema,> 80.0 mm em 3 dias,0.5714,0.35,0.7895,21,False,01/10 a 31/03,PROVISORIO,empirico,0.5714,0.35,0.7895,GPD reprovada no teste de estabilidade
+P14,-20.0,-48.125,chuva_extrema,> 80.0 mm em 3 dias,0.5238,0.3182,0.75,21,False,01/10 a 31/03,PROVISORIO,empirico,0.5238,0.3182,0.75,GPD reprovada no teste de estabilidade
+P15,-20.0,-47.5,chuva_extrema,> 80.0 mm em 3 dias,0.7143,0.5,0.9,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5,0.9,valor empírico fora do IC da GPD
+P16,-19.5,-47.5,chuva_extrema,> 80.0 mm em 3 dias,0.7143,0.5217,0.8947,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5217,0.8947,valor empírico fora do IC da GPD
+P17,-19.0,-47.5,chuva_extrema,> 80.0 mm em 3 dias,0.6022,0.4314,0.7498,21,False,01/10 a 31/03,PROVISORIO,gpd,0.619,0.4211,0.8182,GPD estável e de acordo com o empírico
+P18,-18.5,-49.375,chuva_extrema,> 80.0 mm em 3 dias,0.381,0.1905,0.5909,21,False,01/10 a 31/03,PROVISORIO,empirico,0.381,0.1905,0.5909,GPD reprovada no teste de estabilidade
+P19,-18.5,-50.0,chuva_extrema,> 80.0 mm em 3 dias,0.2595,0.1231,0.3586,21,False,01/10 a 31/03,PROVISORIO,gpd,0.3333,0.1429,0.5455,GPD estável e de acordo com o empírico
+P20,-19.0,-50.625,chuva_extrema,> 80.0 mm em 3 dias,0.4286,0.2378,0.65,21,False,01/10 a 31/03,PROVISORIO,empirico,0.4286,0.2378,0.65,GPD reprovada no teste de estabilidade
+P01,-18.5,-48.75,queda_brusca,>= 5.0 °C em 2 dias,0.381,0.1905,0.6,21,False,01/10 a 31/03,PROVISORIO,empirico,0.381,0.1905,0.6,
+P02,-18.5,-48.125,queda_brusca,>= 5.0 °C em 2 dias,0.2857,0.0999,0.4783,21,False,01/10 a 31/03,PROVISORIO,empirico,0.2857,0.0999,0.4783,
+P03,-19.0,-50.0,queda_brusca,>= 5.0 °C em 2 dias,0.619,0.4,0.8182,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.4,0.8182,
+P04,-19.0,-49.375,queda_brusca,>= 5.0 °C em 2 dias,0.619,0.4,0.8097,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.4,0.8097,
+P05,-19.0,-48.75,queda_brusca,>= 5.0 °C em 2 dias,0.381,0.1818,0.6087,21,False,01/10 a 31/03,PROVISORIO,empirico,0.381,0.1818,0.6087,
+P06,-19.0,-48.125,queda_brusca,>= 5.0 °C em 2 dias,0.2381,0.0526,0.4286,21,False,01/10 a 31/03,PROVISORIO,empirico,0.2381,0.0526,0.4286,
+P07,-19.5,-50.625,queda_brusca,>= 5.0 °C em 2 dias,0.6667,0.45,0.8571,21,False,01/10 a 31/03,PROVISORIO,empirico,0.6667,0.45,0.8571,
+P08,-19.5,-50.0,queda_brusca,>= 5.0 °C em 2 dias,0.619,0.4089,0.8182,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.4089,0.8182,
+P09,-19.5,-49.375,queda_brusca,>= 5.0 °C em 2 dias,0.5238,0.3182,0.7391,21,False,01/10 a 31/03,PROVISORIO,empirico,0.5238,0.3182,0.7391,
+P10,-19.5,-48.75,queda_brusca,>= 5.0 °C em 2 dias,0.4286,0.2222,0.65,21,False,01/10 a 31/03,PROVISORIO,empirico,0.4286,0.2222,0.65,
+P11,-19.5,-48.125,queda_brusca,>= 5.0 °C em 2 dias,0.2857,0.1,0.5,21,False,01/10 a 31/03,PROVISORIO,empirico,0.2857,0.1,0.5,
+P12,-20.0,-49.375,queda_brusca,>= 5.0 °C em 2 dias,0.5238,0.3181,0.7273,21,False,01/10 a 31/03,PROVISORIO,empirico,0.5238,0.3181,0.7273,
+P13,-20.0,-48.75,queda_brusca,>= 5.0 °C em 2 dias,0.4762,0.2609,0.6958,21,False,01/10 a 31/03,PROVISORIO,empirico,0.4762,0.2609,0.6958,
+P14,-20.0,-48.125,queda_brusca,>= 5.0 °C em 2 dias,0.4286,0.2273,0.619,21,False,01/10 a 31/03,PROVISORIO,empirico,0.4286,0.2273,0.619,
+P15,-20.0,-47.5,queda_brusca,>= 5.0 °C em 2 dias,0.1905,0.0455,0.3684,21,False,01/10 a 31/03,PROVISORIO,empirico,0.1905,0.0455,0.3684,
+P16,-19.5,-47.5,queda_brusca,>= 5.0 °C em 2 dias,0.1905,0.0455,0.3684,21,False,01/10 a 31/03,PROVISORIO,empirico,0.1905,0.0455,0.3684,
+P17,-19.0,-47.5,queda_brusca,>= 5.0 °C em 2 dias,0.1905,0.0455,0.3636,21,False,01/10 a 31/03,PROVISORIO,empirico,0.1905,0.0455,0.3636,
+P18,-18.5,-49.375,queda_brusca,>= 5.0 °C em 2 dias,0.5714,0.3636,0.7895,21,False,01/10 a 31/03,PROVISORIO,empirico,0.5714,0.3636,0.7895,
+P19,-18.5,-50.0,queda_brusca,>= 5.0 °C em 2 dias,0.4762,0.2632,0.6957,21,False,01/10 a 31/03,PROVISORIO,empirico,0.4762,0.2632,0.6957,
+P20,-19.0,-50.625,queda_brusca,>= 5.0 °C em 2 dias,0.6667,0.45,0.8571,21,False,01/10 a 31/03,PROVISORIO,empirico,0.6667,0.45,0.8571,
+P01,-18.5,-48.75,algum,chuva_extrema ou queda_brusca no mesmo ano,0.6667,0.4762,0.8571,21,False,01/10 a 31/03,PROVISORIO,empirico,0.6667,0.4762,0.8571,
+P02,-18.5,-48.125,algum,chuva_extrema ou queda_brusca no mesmo ano,0.619,0.4286,0.8421,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.4286,0.8421,
+P03,-19.0,-50.0,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7143,0.5,0.9,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5,0.9,
+P04,-19.0,-49.375,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5714,0.95,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5714,0.95,
+P05,-19.0,-48.75,algum,chuva_extrema ou queda_brusca no mesmo ano,0.619,0.4091,0.8095,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.4091,0.8095,
+P06,-19.0,-48.125,algum,chuva_extrema ou queda_brusca no mesmo ano,0.619,0.3913,0.8182,21,False,01/10 a 31/03,PROVISORIO,empirico,0.619,0.3913,0.8182,
+P07,-19.5,-50.625,algum,chuva_extrema ou queda_brusca no mesmo ano,0.8571,0.7059,1.0,21,False,01/10 a 31/03,PROVISORIO,empirico,0.8571,0.7059,1.0,
+P08,-19.5,-50.0,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5714,0.9474,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5714,0.9474,
+P09,-19.5,-49.375,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5652,0.9474,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5652,0.9474,
+P10,-19.5,-48.75,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5556,0.95,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5556,0.95,
+P11,-19.5,-48.125,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7143,0.5217,0.9091,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5217,0.9091,
+P12,-20.0,-49.375,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7143,0.5238,0.9,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5238,0.9,
+P13,-20.0,-48.75,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5788,0.9377,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5788,0.9377,
+P14,-20.0,-48.125,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7143,0.5,0.9048,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5,0.9048,
+P15,-20.0,-47.5,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5714,0.9474,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5714,0.9474,
+P16,-19.5,-47.5,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5714,0.9091,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5714,0.9091,
+P17,-19.0,-47.5,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7143,0.5238,0.9001,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7143,0.5238,0.9001,
+P18,-18.5,-49.375,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5714,0.9137,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5714,0.9137,
+P19,-18.5,-50.0,algum,chuva_extrema ou queda_brusca no mesmo ano,0.6667,0.45,0.8571,21,False,01/10 a 31/03,PROVISORIO,empirico,0.6667,0.45,0.8571,
+P20,-19.0,-50.625,algum,chuva_extrema ou queda_brusca no mesmo ano,0.7619,0.5714,0.913,21,False,01/10 a 31/03,PROVISORIO,empirico,0.7619,0.5714,0.913,

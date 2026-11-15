@@ -412,3 +412,123 @@ def test_consulta_valida_entrada(base):
         consulta.indicadores_por_ano(base, "P01", date(2026, 10, 1), [{"inicio": 0, "fim": 1, "eventos": ["geada"]}])
     with pytest.raises(KeyError):
         consulta.indicadores_por_ano(base, "P99", date(2026, 10, 1), [{"inicio": 0, "fim": 1, "eventos": ["queda_brusca"]}])
+
+
+# ------------------------------------------------------------------------------ coordenadas
+def test_pontos_na_grade_e_completos(df):
+    p = dados.ler_pontos()
+    assert sorted(p["PONTO"]) == sorted(df["PONTO"].unique())
+    assert not p.duplicated(["LAT", "LON"]).any()
+    for lat, lon in zip(p["LAT"], p["LON"]):
+        assert dados.celula_grade(lat, lon) == (lat, lon)  # centro de célula
+
+
+def test_ponto_da_coordenada():
+    assert dados.ponto_da_coordenada(-18.92, -48.27) == "P06"   # ponto de teste da análise preliminar
+    assert dados.ponto_da_coordenada(-18.5, -48.75) == "P01"
+    assert dados.ponto_da_coordenada(-23.3, -51.2) is None       # Londrina: fora da área
+
+
+def test_consulta_por_coordenada(base):
+    fases = [{"nome": "plantio", "inicio": 0, "fim": 20, "eventos": ["queda_brusca"]}]
+    r = consulta.consultar_coordenada(base, -18.92, -48.27, date(2026, 10, 20), fases)
+    assert r["ponto"] == "P06" and (r["lat"], r["lon"]) == (-19.0, -48.125)
+    assert r == consulta.consultar(base, "P06", date(2026, 10, 20), fases)
+    assert consulta.consultar_coordenada(base, -23.3, -51.2, date(2026, 10, 20), fases)["status"] == "fora_da_area"
+
+
+def test_tabelas_com_coordenadas(tabelas):
+    saf = referencia.com_coordenadas(tabelas[4])
+    assert list(saf.columns[:3]) == ["PONTO", "LAT", "LON"] and saf[["LAT", "LON"]].notna().all().all()
+
+
+# ------------------------------------------------------------------------------------ GPD
+from towers.t7_extremos import gpd
+
+
+@pytest.fixture(scope="module")
+def chuva_safra_p06(ref):
+    s = gpd.serie_safra(ref, eventos.chuva_acumulada(ref, 3))
+    return s[s["PONTO"] == "P06"]
+
+
+def test_serie_safra(chuva_safra_p06):
+    dias = chuva_safra_p06.groupby("ano_safra").size()
+    assert len(dias) == 21 and set(dias) <= {182, 183}  # 183 quando a safra tem 29/02
+
+
+def test_declustering_com_r1_bate_com_sequencias(chuva_safra_p06):
+    from itertools import groupby
+    u = float(chuva_safra_p06["valor"].quantile(0.95))
+    for _, sub in chuva_safra_p06.groupby("ano_safra"):
+        v = sub["valor"].to_numpy()
+        picos, n = gpd.declusterizar(v, u, r=1)
+        seqs = [list(g) for acima, g in groupby(v, key=lambda x: x > u) if acima]
+        assert len(picos) == len(seqs) and n == sum(map(len, seqs))
+        assert np.allclose(picos, [max(s) for s in seqs])
+
+
+def test_declustering_r3(chuva_safra_p06):
+    u = float(chuva_safra_p06["valor"].quantile(0.95))
+    pk = gpd.picos_por_safra(chuva_safra_p06, u, r=3)
+    assert (pk["pico"] > u).all()
+    assert 0 < pk.attrs["n_grupos"] <= pk.attrs["n_excedencias"]
+    assert pk.attrs["n_grupos"] < len(gpd.picos_por_safra(chuva_safra_p06, u, r=1))  # r maior junta grupos
+
+
+def test_ajuste_gpd_bate_com_scipy(chuva_safra_p06):
+    from scipy import stats
+    a = gpd.ajustar_ponto(chuva_safra_p06, 0.95, 3)
+    y = a["picos"]["pico"].to_numpy() - a["u"]
+    xi, _, sigma = stats.genpareto.fit(y, floc=0)
+    assert a["ok"] and a["xi"] == pytest.approx(xi, abs=1e-3) and a["sigma"] == pytest.approx(sigma, rel=1e-3)
+
+
+def test_retorno_e_probabilidade_sao_inversos(chuva_safra_p06):
+    a = gpd.ajustar_ponto(chuva_safra_p06, 0.95, 3)
+    for T in (5, 10, 20):
+        z = gpd.nivel_retorno(T, a["u"], a["sigma"], a["xi"], a["lam"])
+        assert gpd.prob_safra(z, a["u"], a["sigma"], a["xi"], a["lam"]) == pytest.approx(1 / T)
+    with pytest.raises(ValueError):
+        gpd.prob_safra(a["u"] - 1, a["u"], a["sigma"], a["xi"], a["lam"])
+
+
+def test_tendencia_nao_piora_verossimilhanca(chuva_safra_p06):
+    a = gpd.ajustar_ponto(chuva_safra_p06, 0.95, 3)
+    y, anos = a["picos"]["pico"].to_numpy() - a["u"], a["picos"]["ano_safra"].to_numpy()
+    assert gpd.ajustar_gpd_tendencia(y, anos)["nll"] <= a["nll"] + 1e-6
+    t = gpd.teste_tendencia_escala(y, anos)
+    assert t["deviance"] >= 0 and 0 <= t["p"] <= 1
+
+
+def test_nivel_retorno_empirico(chuva_safra_p06):
+    m = chuva_safra_p06.groupby("ano_safra")["valor"].max().to_numpy()
+    z = gpd.nivel_retorno_empirico(m, 10)
+    assert m.min() <= z <= m.max()
+
+
+GPD_RES = config.ROOT / "artifacts" / "t7" / "gpd" / "gpd_por_ponto.csv"
+
+
+@pytest.mark.skipif(not GPD_RES.exists(), reason="rode antes `python -m scripts.t7_gpd`")
+def test_gpd_so_na_chuva_e_nos_aprovados(tabelas):
+    res = referencia.ler_resultado_gpd(GPD_RES)
+    emp = tabelas[4].query("evento == 'chuva_extrema'").set_index("PONTO")["p_clim"]
+    g = res.query("variavel == 'chuva_3d'").set_index("PONTO")
+    estaveis = set(g.index[g["gpd_aprovada"]])
+    concordam = set(g.index[(g["p_gpd_ic_inf"] <= emp.reindex(g.index)) & (emp.reindex(g.index) <= g["p_gpd_ic_sup"])])
+    # sem a regra de concordância: todos os estáveis; com ela: só os que também concordam
+    solto = referencia.aplicar_gpd_chuva(tabelas[4], res, 80.0, exigir_concordancia=False)
+    assert set(solto.query("evento == 'chuva_extrema' and metodo == 'gpd'")["PONTO"]) == estaveis
+    saf = referencia.aplicar_gpd_chuva(tabelas[4], res, 80.0)
+    chuva = saf[saf["evento"] == "chuva_extrema"].set_index("PONTO")
+    aprovados = estaveis & concordam
+    assert set(chuva.index[chuva["metodo"] == "gpd"]) == aprovados
+    assert (chuva.loc[sorted(estaveis - concordam), "motivo_metodo"] == "valor empírico fora do IC da GPD").all()
+    assert (saf.loc[saf["evento"] != "chuva_extrema", "metodo"] == "empirico").all()
+    for p in aprovados:
+        assert chuva.loc[p, "p_clim"] == pytest.approx(g.loc[p, "p_gpd"])
+    # o valor empírico fica guardado ao lado
+    assert np.allclose(chuva["p_empirico"].loc[emp.index], emp)
+    with pytest.raises(ValueError, match="outro limiar"):
+        referencia.aplicar_gpd_chuva(tabelas[4], res, 70.0)

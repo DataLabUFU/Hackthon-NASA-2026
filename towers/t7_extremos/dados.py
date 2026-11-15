@@ -42,6 +42,32 @@ VALOR_AUSENTE = -999.0  # "sem dado" na NASA POWER
 ANO_INICIO_REFERENCIA = 2000
 ANO_FIM_REFERENCIA = 2021
 
+# Coordenadas dos pontos: centro da célula da grade da POWER (MERRA-2, 0,5° x 0,625°)
+CAMINHO_PONTOS = Path(__file__).resolve().parent / "pontos.csv"
+PASSO_LAT, PASSO_LON = 0.5, 0.625
+
+
+def ler_pontos(caminho: str | Path | None = None) -> pd.DataFrame:
+    """Tabela ``PONTO, LAT, LON`` (graus decimais; sul e oeste negativos)."""
+    return pd.read_csv(caminho or CAMINHO_PONTOS)
+
+
+def celula_grade(lat: float, lon: float) -> tuple[float, float]:
+    """Centro da célula da grade da POWER que contém (lat, lon)."""
+    return round(round(lat / PASSO_LAT) * PASSO_LAT, 4), round(round(lon / PASSO_LON) * PASSO_LON, 4)
+
+
+def ponto_da_coordenada(lat: float, lon: float, pontos: pd.DataFrame | None = None) -> str | None:
+    """Ponto cuja célula contém (lat, lon), ou ``None`` se a coordenada cair fora dos 20 pontos.
+
+    Não usa o ponto "mais próximo": fora das células conhecidas não há dado, e devolver um
+    vizinho daria a falsa impressão de que a torre cobre aquele local.
+    """
+    pontos = ler_pontos() if pontos is None else pontos
+    lat_c, lon_c = celula_grade(lat, lon)
+    achou = pontos[np.isclose(pontos["LAT"], lat_c) & np.isclose(pontos["LON"], lon_c)]
+    return None if achou.empty else str(achou["PONTO"].iloc[0])
+
 
 def decendio(datas) -> np.ndarray:
     """Decêndio do ano (1–36), como no ZARC: dias 1–10, 11–20 e 21–fim de cada mês."""

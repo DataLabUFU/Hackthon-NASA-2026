@@ -6,18 +6,27 @@ Três tabelas:
   dois? (1/0/NaN). Com ela dá para calcular a probabilidade de qualquer janela (ex.: a fase
   de plantio de uma cultura) direto dos anos.
 - ``decendio``: probabilidade histórica por ponto e decêndio, com IC e versão suavizada.
-- ``safra``: probabilidade por ponto na safra de outubro a março.
+- ``safra``: probabilidade por ponto na safra de outubro a março. Na chuva extrema, os pontos
+  aprovados no teste de estabilidade usam a GPD (coluna ``metodo``); o resto é empírico.
 """
 from __future__ import annotations
 
 import pandas as pd
 from omegaconf import DictConfig
 
-from . import eventos, probabilidade as prob
+from . import dados, eventos, probabilidade as prob
 from .config import limiar_obrigatorio
 
 EVENTOS = ("chuva_extrema", "queda_brusca", "algum")
 SAFRA = ((10, 1), (3, 31))  # outubro a março
+
+
+def com_coordenadas(tab: pd.DataFrame, pontos: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Acrescenta ``LAT`` e ``LON`` logo depois de ``PONTO``."""
+    pontos = dados.ler_pontos() if pontos is None else pontos
+    out = tab.merge(pontos, on="PONTO", how="left")
+    cols = ["PONTO", "LAT", "LON"] + [c for c in tab.columns if c != "PONTO"]
+    return out[cols]
 
 
 def indicadores_diarios(ref: pd.DataFrame, cfg: DictConfig) -> dict[str, pd.Series]:
@@ -63,6 +72,7 @@ def tabela_decendio(indicadores: pd.DataFrame, cfg: DictConfig) -> pd.DataFrame:
         tab.insert(2, "evento", ev)
         tab.insert(3, "limiar", info[ev]["limiar"])
         tab["status_limiar"] = info[ev]["status_limiar"]
+        tab["metodo"] = "empirico"
         partes.append(tab)
     return pd.concat(partes, ignore_index=True)
 
@@ -81,5 +91,49 @@ def tabela_safra(ref: pd.DataFrame, diarios: dict[str, pd.Series], cfg: DictConf
         tab.insert(2, "limiar", info[ev]["limiar"])
         tab["janela"] = "01/10 a 31/03"
         tab["status_limiar"] = info[ev]["status_limiar"]
+        tab["metodo"] = "empirico"
         partes.append(tab)
     return pd.concat(partes, ignore_index=True)
+
+
+def ler_resultado_gpd(caminho) -> pd.DataFrame:
+    """Lê a saída de ``scripts.t7_gpd`` (``gpd_por_ponto.csv``)."""
+    from pathlib import Path
+    caminho = Path(caminho)
+    if not caminho.exists():
+        raise FileNotFoundError(f"{caminho} não existe: rode antes `python -m scripts.t7_gpd`")
+    return pd.read_csv(caminho)
+
+
+def aplicar_gpd_chuva(safra: pd.DataFrame, resultado_gpd: pd.DataFrame, limiar_mm: float,
+                      exigir_concordancia: bool = True) -> pd.DataFrame:
+    """Troca ``p_clim`` e IC da chuva extrema pela GPD onde ela é confiável.
+
+    Usa a GPD num ponto se (1) ela passou no teste de estabilidade e (2), com
+    ``exigir_concordancia``, o valor empírico cai dentro do IC da GPD. Se o valor observado
+    fica fora, o modelo está mal ajustado justamente no nível entregue, e vale a contagem.
+
+    Só a linha ``chuva_extrema`` da safra out–mar muda; queda e ``algum`` seguem empíricos
+    (``algum`` não pode misturar GPD com contagem sem supor independência). Os valores
+    empíricos ficam em ``p_empirico``, ``ic_inf_empirico`` e ``ic_sup_empirico``, e
+    ``motivo_metodo`` explica a escolha.
+    """
+    g = resultado_gpd[resultado_gpd["variavel"] == "chuva_3d"].set_index("PONTO")
+    if not (g["z_evento"] == limiar_mm).all():
+        raise ValueError("A GPD foi rodada com outro limiar de chuva: rode `python -m scripts.t7_gpd` de novo")
+    out = safra.copy()
+    out["p_empirico"], out["ic_inf_empirico"], out["ic_sup_empirico"] = out["p_clim"], out["ic_inf"], out["ic_sup"]
+    out["motivo_metodo"] = ""
+    for i, linha in out[out["evento"] == "chuva_extrema"].iterrows():
+        r = g.loc[linha["PONTO"]]
+        concorda = r["p_gpd_ic_inf"] <= linha["p_clim"] <= r["p_gpd_ic_sup"]
+        if not bool(r["gpd_aprovada"]):
+            out.loc[i, "motivo_metodo"] = "GPD reprovada no teste de estabilidade"
+        elif exigir_concordancia and not concorda:
+            out.loc[i, "motivo_metodo"] = "valor empírico fora do IC da GPD"
+        else:
+            out.loc[i, ["p_clim", "ic_inf", "ic_sup"]] = [r["p_gpd"], r["p_gpd_ic_inf"], r["p_gpd_ic_sup"]]
+            out.loc[i, "metodo"] = "gpd"
+            out.loc[i, "flag_p_extremo"] = False
+            out.loc[i, "motivo_metodo"] = "GPD estável e de acordo com o empírico"
+    return out

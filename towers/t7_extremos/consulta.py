@@ -42,6 +42,7 @@ class BaseT7:
     diarios: pd.DataFrame      # PONTO, data, chuva_extrema, queda_brusca (só anos de referência)
     completo: pd.DataFrame     # série inteira (inclui 2022+), só para o indicador de estiagem
     clim_dtr: pd.DataFrame     # amplitude térmica normal (anos de referência)
+    pontos: pd.DataFrame       # PONTO, LAT, LON
 
 
 def preparar_base(cfg: DictConfig | None = None, caminho: str | Path | None = None) -> BaseT7:
@@ -54,7 +55,7 @@ def preparar_base(cfg: DictConfig | None = None, caminho: str | Path | None = No
     diarios = pd.DataFrame({"PONTO": ref["PONTO"], "data": ref["data"],
                             "chuva_extrema": ind["chuva_extrema"], "queda_brusca": ind["queda_brusca"]})
     clim = eventos.climatologia_dtr(ref, cfg.limiares.estiagem.janela_climatologia_dias)
-    return BaseT7(cfg, diarios, completo, clim)
+    return BaseT7(cfg, diarios, completo, clim, dados.ler_pontos())
 
 
 def _data_no_ano(data_plantio: date, ano: int) -> date:
@@ -161,8 +162,11 @@ def consultar(base: BaseT7, ponto: str, data_plantio: date, fases: list[dict],
                                          nivel=cfg.bootstrap.nivel_ic, repeticoes_permutacao=e.repeticoes_permutacao)
     p_algum = _resumo(tab["algum"].to_numpy(float), cfg, ponto)
     lc, lq = cfg.limiares.chuva_extrema, cfg.limiares.queda_temperatura
+    coord = base.pontos.set_index("PONTO").loc[ponto]
     return {
         "ponto": ponto,
+        "lat": float(coord["LAT"]),
+        "lon": float(coord["LON"]),
         "data_plantio": data_plantio.isoformat(),
         "p_chuva_extrema": _resumo(tab["chuva_extrema"].to_numpy(float), cfg, ponto),
         "p_oscilacao": _resumo(tab["queda_brusca"].to_numpy(float), cfg, ponto),
@@ -181,3 +185,16 @@ def consultar(base: BaseT7, ponto: str, data_plantio: date, fases: list[dict],
         },
         "referencia": f"{cfg.referencia.ano_inicio}–{cfg.referencia.ano_fim}",
     }
+
+
+def consultar_coordenada(base: BaseT7, lat: float, lon: float, data_plantio: date, fases: list[dict],
+                         fases_enso: pd.Series | None = None, fase_enso_atual: str | None = None) -> dict:
+    """Como ``consultar``, mas a partir de latitude e longitude.
+
+    Usa o ponto cuja célula da grade (0,5° x 0,625°) contém a coordenada. Fora dos 20 pontos,
+    devolve ``{"status": "fora_da_area"}`` em vez de usar um ponto vizinho.
+    """
+    ponto = dados.ponto_da_coordenada(lat, lon, base.pontos)
+    if ponto is None:
+        return {"status": "fora_da_area", "lat": lat, "lon": lon, "celula": dados.celula_grade(lat, lon)}
+    return consultar(base, ponto, data_plantio, fases, fases_enso, fase_enso_atual)
