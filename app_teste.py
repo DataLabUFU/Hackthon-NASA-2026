@@ -271,6 +271,9 @@ header-tag {
         font-size: 13px !important;
     }
 }
+/* Botão "Gerar recomendações" centralizado */
+.st-key-btn_gerar{display:flex!important;justify-content:center!important;width:100%!important}
+.st-key-btn_gerar .stButton{display:flex;justify-content:center;width:auto!important}
 </style>"""
 
 MARCA_SVG = ('<svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true"><circle cx="23" cy="23" r="22" fill="#355b3b" '
@@ -415,10 +418,8 @@ def coletar_entrada():
 
         st.write("")
 
-        # Botão centralizado em relação à largura da página
-        _, meio, _ = st.columns([2, 3, 2])
-
-        clicou = meio.button(
+        # Botão centralizado na largura do formulário (CSS em .st-key-btn_gerar)
+        clicou = st.button(
             "Gerar recomendações",
             type="primary",
             key="btn_gerar"
@@ -443,7 +444,7 @@ def coletar_entrada():
 def html_motivo(m: str) -> str:
     """Destaca a informação do produtor a que a frase responde ("Seu objetivo “…”: resposta")."""
     ancora, sep, resto = m.partition(": ")
-    if sep and len(ancora) <= 90:
+    if sep and len(ancora) <= 160:
         return f"<strong>{escape(ancora)}:</strong> {escape(resto)}"
     return escape(m)
 

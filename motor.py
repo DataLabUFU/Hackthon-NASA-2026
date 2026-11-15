@@ -334,7 +334,7 @@ EXEMPLOS_BENEFICIO = {
     "descompactar": "nabo-forrageiro, braquiária, milheto ou crotalária",
     "materia_organica": "culturas de muita palhada, como milheto, braquiária, sorgo ou milho",
     "estrutura_solo": "milheto, braquiária, nabo-forrageiro ou crotalária",
-    "reter_agua": "culturas de muita palhada, como milheto ou braquiária",
+    "reter_agua": "culturas de muita palhada, como milheto, braquiária, sorgo ou milho",
     "controlar_erosao": "plantas de cobertura (milheto, braquiária, crotalária) ou pastagem",
     "controlar_pragas": "crotalária ou mucuna (reduzem nematoides) ou uma cultura de outra família",
     "controlar_doencas": "uma cultura de família botânica diferente da última safra",
@@ -344,6 +344,25 @@ EXEMPLOS_BENEFICIO = {
 
 def _rotulo(texto: str) -> str:
     return f"“{texto[:1].lower() + texto[1:]}”"
+
+
+def _juntar(itens: list[str]) -> str:
+    return itens[0] if len(itens) == 1 else ", ".join(itens[:-1]) + " e " + itens[-1]
+
+
+def _ancora_pedidos(itens: list[tuple[str, str]]) -> str:
+    """'Seu objetivo “a” e o problema “b”' (sem repetir o mesmo rótulo)."""
+    obj = list(dict.fromkeys(_rotulo(x) for t, x in itens if t == "objetivo"))
+    prob = list(dict.fromkeys(_rotulo(x) for t, x in itens if t == "problema"))
+    partes = []
+    if obj:
+        partes.append(("Seu objetivo " if len(obj) == 1 else "Seus objetivos ") + _juntar(obj))
+    if prob:
+        if obj:
+            partes.append(("o problema " if len(prob) == 1 else "os problemas ") + _juntar(prob))
+        else:
+            partes.append(("Problema informado " if len(prob) == 1 else "Problemas informados ") + _juntar(prob))
+    return " e ".join(partes)
 
 
 def _resposta_ao_pedido(r: dict, codigo: str) -> str:
@@ -399,25 +418,30 @@ def _justificativas_do_produtor(r: dict, e: Entrada | None, ctx: dict | None = N
         else:
             m.append(f"Sua cultura desejada ({d['nome_pt']}): nota {100 * d['score_final']:.0f} contra "
                      f"{100 * r['score_final']:.0f} de {nome}{_por_que_diferente(r, d)}.")
-    # objetivos e problemas, um a um, com as palavras do produtor
+    # objetivos e problemas com as palavras do produtor; pedidos com a mesma resposta viram uma linha só
+    linhas: dict[str, list[tuple[str, str]]] = {}      # resposta → [(tipo, rótulo)], na ordem em que aparecem
     for o in e.objetivos:
-        ancora = f"Seu objetivo {_rotulo(OBJETIVOS.get(o, o))}"
+        rotulo = OBJETIVOS.get(o, o)
         if (cod := OBJETIVO_PARA_BENEFICIO.get(o)):
-            m.append(f"{ancora}: {_resposta_ao_pedido(r, cod)}")
+            linhas.setdefault(_resposta_ao_pedido(r, cod), []).append(("objetivo", rotulo))
         elif o == "Aumentar produtividade" and r.get("s_t1") is not None and not r.get("eliminada"):
             apta = f", apta em {_pct(r['prob_apta'])} dos anos" if r.get("prob_apta") is not None else ""
             ext = (f"; {_frase_extremos(r)}" if r.get("p_extremo") is not None else "")
-            m.append(f"{ancora}: clima {_qualidade(r['s_t1'])} e água {_qualidade(r.get('s_t2'))} na data "
-                     f"sugerida{apta}{ext}.")
+            resposta = (f"clima {_qualidade(r['s_t1'])} e água {_qualidade(r.get('s_t2'))} na data "
+                        f"sugerida{apta}{ext}.")
+            linhas.setdefault(resposta, []).append(("objetivo", rotulo))
         elif o == "Acesso a crédito e seguro":
-            m.append(f"{ancora}: " + {
+            resposta = {
                 "elegivel": "dentro do zoneamento oficial (ZARC); elegível a custeio, Proagro e seguro rural.",
                 "condicional": "elegível, desde que o imóvel esteja regularizado.",
                 "inelegivel": "fora das regras de crédito e seguro nesta data.",
-            }.get(r.get("status_elegibilidade") or "", "cultura sem zoneamento oficial; confirme com o banco."))
+            }.get(r.get("status_elegibilidade") or "", "cultura sem zoneamento oficial; confirme com o banco.")
+            linhas.setdefault(resposta, []).append(("objetivo", rotulo))
     for p in e.problemas:
         if (cod := PROBLEMA_PARA_BENEFICIO.get(p)):
-            m.append(f"Problema informado {_rotulo(p)}: {_resposta_ao_pedido(r, cod)}")
+            linhas.setdefault(_resposta_ao_pedido(r, cod), []).append(("problema", p))
+    for resposta, itens in linhas.items():
+        m.append(f"{_ancora_pedidos(itens)}: {resposta}")
     # histórico (rotação)
     if e.ultimo:
         hist = f"{e.penultimo} → {e.ultimo}" if e.penultimo else e.ultimo

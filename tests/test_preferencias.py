@@ -123,3 +123,30 @@ def test_outras_culturas_comparadas_com_a_desejada():
     linha = dict(id_cultura="milho", nome_pt="Milho", plantio=D, score_final=0.85, eliminada=False)
     m = mt._recomendacao_de_linha(linha, {}, e, {"desejada": desejada}).motivos
     assert m[0] == "Sua cultura desejada (Soja): nota 60 contra 85 de Milho; Soja perde em água."
+
+
+def test_pedidos_com_a_mesma_resposta_viram_uma_linha():
+    e = mt.Entrada(objetivos=["Reduzir compactação", "Aumentar matéria orgânica", "Reter água", "Controlar pragas"],
+                   problemas=["Compactação do solo", "Presença de pragas", "Baixo teor de matéria orgânica"],
+                   data_plantio=D)
+    linha = dict(id_cultura="milheto", nome_pt="Milheto", plantio=D, score_final=0.8, eliminada=False,
+                 beneficios_atendidos=["descompactar", "materia_organica", "reter_agua"],
+                 beneficios_parciais=["controlar_pragas"], beneficios_nao_atendidos=[])
+    m = mt._recomendacao_de_linha(linha, {}, e).motivos
+    assert m[0] == ("Seu objetivo “reduzir compactação” e o problema “compactação do solo”: atende, raízes que "
+                    "rompem a compactação.")
+    assert m[1] == ("Seu objetivo “aumentar matéria orgânica” e o problema “baixo teor de matéria orgânica”: atende, "
+                    "aumenta a matéria orgânica (muita palhada).")
+    assert m[2].startswith("Seu objetivo “melhorar retenção de água”: atende")
+    assert m[3].startswith("Seu objetivo “controlar pragas” e o problema “presença de pragas”: atende em parte")
+    assert len(m) == len(set(x.split(": ", 1)[1] for x in m))       # nenhuma justificativa repetida
+
+
+def test_dois_problemas_com_a_mesma_resposta():
+    e = mt.Entrada(problemas=["Baixa retenção de água", "Baixo teor de matéria orgânica"], data_plantio=D)
+    linha = dict(id_cultura="tomate", nome_pt="Tomate", plantio=D, score_final=0.5, eliminada=False,
+                 beneficios_atendidos=[], beneficios_parciais=[],
+                 beneficios_nao_atendidos=["reter_agua", "materia_organica"])
+    m = mt._recomendacao_de_linha(linha, {}, e).motivos
+    assert m[0] == ("Problemas informados “baixa retenção de água” e “baixo teor de matéria orgânica”: não ajuda; "
+                    "para isso, prefira culturas de muita palhada, como milheto, braquiária, sorgo ou milho.")
