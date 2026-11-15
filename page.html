@@ -1,0 +1,1430 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgroData | Rotação de Culturas</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --verde-escuro: #23452f;
+            --verde: #477b43;
+            --verde-claro: #e4efdf;
+            --amarelo: #e9bd45;
+            --terra: #a36c43;
+            --fundo: #f3f5ed;
+            --branco: #ffffff;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--fundo);
+            color: #283b2b;
+        }
+
+        /* CABEÇALHO */
+
+        header {
+            background-color: var(--verde-escuro);
+            color: white;
+            padding: 25px 7%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .logo span {
+            color: var(--amarelo);
+        }
+
+        header p {
+            font-size: 13px;
+            color: #d7e2d3;
+            margin-top: 5px;
+        }
+
+        .header-tag {
+            background-color: #355b3b;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        /* CONTEÚDO PRINCIPAL */
+
+        main {
+            max-width: 1250px;
+            margin: 35px auto;
+            padding: 0 25px;
+        }
+
+        .titulo-pagina {
+            margin-bottom: 25px;
+        }
+
+        .titulo-pagina h1 {
+            font-size: 28px;
+            color: var(--verde-escuro);
+            margin-bottom: 8px;
+        }
+
+        .titulo-pagina p {
+            color: #718071;
+            font-size: 14px;
+        }
+
+        /* FORMULÁRIO */
+
+        .formulario {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+            margin-bottom: 35px;
+        }
+
+        .secao-titulo {
+            font-size: 19px;
+            color: var(--verde-escuro);
+            margin-bottom: 22px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e9df;
+        }
+
+        .grade-formulario {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 22px;
+        }
+
+        .campo {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .campo label {
+            font-weight: bold;
+            font-size: 13px;
+            color: #405342;
+        }
+
+        .campo select,
+        .campo input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d8dfd4;
+            border-radius: 7px;
+            background-color: #fafbf8;
+            color: #394b3b;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .campo select:focus,
+        .campo input:focus {
+            border-color: var(--verde);
+        }
+
+        .campo small {
+            font-size: 11px;
+            color: #849184;
+        }
+
+        .campo-completo {
+            grid-column: span 2;
+        }
+
+        /* PROBLEMAS E OBJETIVOS */
+
+        .problemas,
+        .objetivos {
+            margin-top: 30px;
+        }
+
+        .objetivos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .objetivo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 13px;
+            border: 1px solid #e0e7dc;
+            border-radius: 8px;
+            background-color: #fafbf8;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .objetivo:hover {
+            background-color: var(--verde-claro);
+        }
+
+        .objetivo input {
+            accent-color: var(--verde);
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* BOTÃO */
+
+        .botao-analisar {
+            margin-top: 30px;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--verde);
+            color: white;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .botao-analisar:hover {
+            background-color: var(--verde-escuro);
+        }
+
+        /* RESULTADOS */
+
+        .resultados {
+            margin-top: 40px;
+        }
+
+        .resultado-intro {
+            margin-bottom: 25px;
+        }
+
+        .resultado-intro h2 {
+            color: var(--verde-escuro);
+            margin-bottom: 7px;
+            font-size: 23px;
+        }
+
+        .resultado-intro p {
+            font-size: 13px;
+            color: #778477;
+            line-height: 1.6;
+        }
+
+        /* CATEGORIAS DE RECOMENDAÇÃO */
+
+        .grupos-recomendacao {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .grupo-recomendacao {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .grupo-titulo {
+            padding: 16px;
+            border-radius: 9px;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .grupo-verde .grupo-titulo {
+            background-color: #e2f1e3;
+            color: #35743d;
+            border: 1px solid #c7e3c9;
+        }
+
+        .grupo-amarelo .grupo-titulo {
+            background-color: #fff3d2;
+            color: #9c751c;
+            border: 1px solid #f0dfad;
+        }
+
+        .grupo-vermelho .grupo-titulo {
+            background-color: #f9e5e3;
+            color: #a8433c;
+            border: 1px solid #edc9c5;
+        }
+
+        /* CARDS */
+
+        .card {
+            border-radius: 11px;
+            padding: 22px;
+            background-color: white;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+            border-top: 5px solid;
+        }
+
+        .card-verde {
+            border-color: #4c9957;
+        }
+
+        .card-amarelo {
+            border-color: #e6b83f;
+        }
+
+        .card-vermelho {
+            border-color: #cf6660;
+        }
+
+        .card-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .status-verde {
+            background-color: #e2f1e3;
+            color: #35743d;
+        }
+
+        .status-amarelo {
+            background-color: #fff3d2;
+            color: #9c751c;
+        }
+
+        .status-vermelho {
+            background-color: #f9e5e3;
+            color: #a8433c;
+        }
+
+        .numero-card {
+            font-size: 12px;
+            font-weight: bold;
+            color: #778477;
+            white-space: nowrap;
+        }
+
+        .card h3 {
+            font-size: 20px;
+            color: var(--verde-escuro);
+            margin-bottom: 8px;
+        }
+
+        .card .descricao {
+            color: #7b897b;
+            font-size: 12px;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        .card h4 {
+            font-size: 13px;
+            margin: 17px 0 10px;
+            color: #405342;
+        }
+
+        .card ul {
+            padding-left: 18px;
+        }
+
+        .card li {
+            font-size: 12px;
+            color: #667466;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .clima {
+            background-color: #f2f5ee;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 15px;
+        }
+
+        .clima p {
+            font-size: 12px;
+            margin-bottom: 7px;
+            color: #526451;
+            line-height: 1.4;
+        }
+
+        .clima p:last-child {
+            margin-bottom: 0;
+        }
+
+        .clima strong {
+            color: var(--verde-escuro);
+        }
+
+        /* ESTATÍSTICAS */
+
+        .estatisticas {
+            margin: 40px 0;
+            padding: 30px;
+            background-color: var(--verde-escuro);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .estatisticas h2 {
+            font-size: 21px;
+            margin-bottom: 9px;
+        }
+
+        .estatisticas p {
+            font-size: 13px;
+            color: #d1dfcf;
+            line-height: 1.6;
+        }
+
+        .botao-estatisticas {
+            background-color: var(--amarelo);
+            color: #283b2b;
+            text-decoration: none;
+            padding: 14px 20px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+
+        .botao-estatisticas:hover {
+            background-color: #f4cf68;
+        }
+
+        /* RODAPÉ */
+
+        footer {
+            background-color: #1b3624;
+            color: #c5d2c3;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+        }
+
+        /* RESPONSIVIDADE */
+
+        @media (max-width: 1000px) {
+            .grupos-recomendacao {
+                grid-template-columns: 1fr;
+            }
+
+            .objetivos-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                padding: 20px;
+            }
+
+            .header-tag {
+                display: none;
+            }
+
+            main {
+                padding: 0 15px;
+            }
+
+            .formulario {
+                padding: 20px;
+            }
+
+            .grade-formulario {
+                grid-template-columns: 1fr;
+            }
+
+            .campo-completo {
+                grid-column: span 1;
+            }
+
+            .objetivos-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .estatisticas {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .botao-estatisticas {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        /* CARDS EXPANSÍVEIS */
+
+.card {
+    padding: 0;
+    overflow: hidden;
+    border-top: 4px solid;
+}
+
+.card-verde {
+    border-color: #4c9957;
+}
+
+.card-amarelo {
+    border-color: #e6b83f;
+}
+
+.card-vermelho {
+    border-color: #cf6660;
+}
+
+/* Cabeçalho sempre visível */
+
+.card-resumo {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+}
+
+.card-resumo:hover {
+    background-color: #f8faf6;
+}
+
+.card-resumo h3 {
+    color: var(--verde-escuro);
+    font-size: 17px;
+    margin: 0;
+}
+
+.card-identificacao {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card-posicao {
+    font-size: 11px;
+    color: #778477;
+    font-weight: bold;
+}
+
+.card-seta {
+    font-size: 20px;
+    color: #718071;
+    transition: transform 0.25s;
+}
+
+/* Conteúdo expansível */
+
+.card-conteudo {
+    display: none;
+    padding: 0 20px 22px;
+    animation: aparecer 0.25s ease;
+}
+
+.card.aberto .card-conteudo {
+    display: block;
+}
+
+.card.aberto .card-seta {
+    transform: rotate(180deg);
+}
+
+@keyframes aparecer {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+    </style>
+</head>
+
+<body>
+
+    <!-- CABEÇALHO -->
+
+    <header>
+        <div>
+            <div class="logo">Agro<span>Data</span></div>
+            <p>Inteligência agrícola para decisões mais sustentáveis</p>
+        </div>
+
+        <div class="header-tag">
+            Apoio à rotação de culturas
+        </div>
+    </header>
+
+    <main>
+
+        <!-- INTRODUÇÃO -->
+
+        <section class="titulo-pagina">
+            <h1>Planejamento da próxima plantação</h1>
+
+            <p>
+                Informe as condições da sua área para receber recomendações
+                de culturas considerando o histórico, os objetivos e o clima.
+            </p>
+        </section>
+
+        <!-- FORMULÁRIO -->
+
+        <section class="formulario">
+
+            <h2 class="secao-titulo">
+                01. Características da propriedade
+            </h2>
+
+            <div class="grade-formulario">
+
+                <!-- PRIMEIRO PLANTIO -->
+
+                <div class="campo">
+                    <label for="plantio1">Penúltimo plantio</label>
+
+                    <select id="plantio1">
+                        <option value="">Selecione a cultura</option>
+                        <option>Soja</option>
+                        <option>Milho</option>
+                        <option>Trigo</option>
+                        <option>Algodão</option>
+                        <option>Feijão</option>
+                        <option>Sorgo</option>
+                        <option>Girassol</option>
+                        <option>Milheto</option>
+                        <option>Pastagem</option>
+                    </select>
+                </div>
+
+                <!-- SEGUNDO PLANTIO -->
+
+                <div class="campo">
+                    <label for="plantio2">Último plantio</label>
+
+                    <select id="plantio2">
+                        <option value="">Selecione a cultura</option>
+                        <option>Soja</option>
+                        <option>Milho</option>
+                        <option>Trigo</option>
+                        <option>Algodão</option>
+                        <option>Feijão</option>
+                        <option>Sorgo</option>
+                        <option>Girassol</option>
+                        <option>Milheto</option>
+                        <option>Pastagem</option>
+                    </select>
+                </div>
+
+                <!-- ESTADO -->
+
+                <div class="campo">
+                    <label for="estado">Estado</label>
+
+                    <select id="estado">
+                        <option value="">Selecione o estado</option>
+                        <option value="MG">Minas Gerais</option>
+                        <option value="GO">Goiás</option>
+                        <option value="SP">São Paulo</option>
+                        <option value="MT">Mato Grosso</option>
+                        <option value="MS">Mato Grosso do Sul</option>
+                    </select>
+                </div>
+
+                <!-- CIDADE -->
+
+                <div class="campo">
+                    <label for="cidade">Cidade</label>
+
+                    <select id="cidade" disabled>
+                        <option value="">Selecione primeiro o estado</option>
+                    </select>
+                </div>
+
+                <!-- DATA -->
+
+                <div class="campo">
+                    <label for="dataPlantio">
+                        Data prevista para a próxima plantação
+                    </label>
+
+                    <input type="date" id="dataPlantio">
+                </div>
+
+                <!-- CULTURA DESEJADA -->
+
+                <div class="campo">
+                    <label for="culturaDesejada">
+                        Qual cultura deseja plantar?
+                    </label>
+
+                    <select id="culturaDesejada">
+                        <option value="">Sem preferência</option>
+                        <option>Soja</option>
+                        <option>Milho</option>
+                        <option>Trigo</option>
+                        <option>Algodão</option>
+                        <option>Feijão</option>
+                        <option>Sorgo</option>
+                        <option>Girassol</option>
+                        <option>Milheto</option>
+                        <option>Outra / Indiferente</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- PROBLEMAS NA ÁREA -->
+
+            <div class="problemas">
+
+                <h2 class="secao-titulo">
+                    02. Problemas identificados na área
+                </h2>
+
+                <div class="objetivos-grid">
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Compactação do solo">
+                        Compactação do solo
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Baixa retenção de água">
+                        Baixa retenção de água
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Deficiência de nitrogênio">
+                        Deficiência de nitrogênio
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Presença de pragas">
+                        Presença de pragas
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Incidência de doenças">
+                        Incidência de doenças
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Baixo teor de matéria orgânica">
+                        Baixo teor de matéria orgânica
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Erosão do solo">
+                        Erosão do solo
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="problemas"
+                            value="Plantas daninhas">
+                        Plantas daninhas
+                    </label>
+
+                </div>
+            </div>
+
+            <!-- OBJETIVOS -->
+
+            <div class="objetivos">
+
+                <h2 class="secao-titulo">
+                    03. Objetivos para a próxima safra
+                </h2>
+
+                <div class="objetivos-grid">
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Reduzir compactação">
+                        Reduzir compactação
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Reter água">
+                        Melhorar retenção de água
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Aumentar nitrogênio">
+                        Aumentar nitrogênio
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Controlar pragas">
+                        Controlar pragas
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Controlar doenças">
+                        Reduzir doenças
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Aumentar matéria orgânica">
+                        Aumentar matéria orgânica
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Melhorar estrutura do solo">
+                        Melhorar estrutura do solo
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Reduzir erosão">
+                        Reduzir erosão
+                    </label>
+
+                    <label class="objetivo">
+                        <input type="checkbox" name="objetivos"
+                            value="Aumentar produtividade">
+                        Aumentar produtividade
+                    </label>
+
+                </div>
+            </div>
+
+            <button class="botao-analisar" onclick="analisarArea()">
+                Analisar área e gerar recomendações
+            </button>
+
+        </section>
+
+        <!-- RESULTADOS -->
+
+        <section class="resultados" id="resultados">
+
+            <div class="resultado-intro">
+
+                <h2>Recomendações para sua próxima safra</h2>
+
+                <p id="resumo">
+                    Simulação demonstrativa para Uberlândia - MG.
+                    Os resultados abaixo são fictícios.
+                </p>
+
+            </div>
+
+            <!-- TRÊS GRUPOS DE RECOMENDAÇÃO -->
+
+            <div class="grupos-recomendacao">
+
+                <!-- GRUPO 1: RECOMENDADAS -->
+
+                <!-- GRUPO 1: RECOMENDADAS -->
+<section class="grupo-recomendacao grupo-verde">
+
+    <h3 class="grupo-titulo">Culturas recomendadas</h3>
+
+    <!-- 1. MILHETO -->
+    <article class="card card-verde">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">1º LUGAR - MAIS RECOMENDADA</span>
+                <h3>Milheto</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Alternativa para cobertura e recuperação do solo.
+            </p>
+
+            <h4>Por que recomendamos?</h4>
+            <ul>
+                <li>Contribui para a formação de palhada e proteção do solo.</li>
+                <li>Possui sistema radicular que auxilia na melhoria da estrutura física.</li>
+                <li>Ajuda a reduzir perdas de água por evaporação.</li>
+                <li>Contribui para a ciclagem de nutrientes.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>25°C a 35°C</strong></p>
+                <p>Chuva: <strong>400 a 600 mm no ciclo</strong></p>
+                <p>Época: <strong>Verão / transição</strong></p>
+                <p>Adaptação: <strong>Boa tolerância à seca</strong></p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 2. CROTALÁRIA -->
+    <article class="card card-verde">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">2º LUGAR</span>
+                <h3>Crotalária</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Leguminosa utilizada na cobertura e melhoria do sistema produtivo.
+            </p>
+
+            <h4>Por que recomendamos?</h4>
+            <ul>
+                <li>Auxilia na fixação biológica de nitrogênio.</li>
+                <li>Contribui para a produção de biomassa.</li>
+                <li>Pode auxiliar no manejo de determinados nematoides, conforme a espécie.</li>
+                <li>Favorece a diversificação da rotação de culturas.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>20°C a 30°C</strong></p>
+                <p>Chuva: <strong>400 a 700 mm no ciclo</strong></p>
+                <p>Época: <strong>Primavera / verão</strong></p>
+                <p>Adaptação: <strong>Boa adaptação ao calor</strong></p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 3. GIRASSOL -->
+    <article class="card card-verde">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">3º LUGAR</span>
+                <h3>Girassol</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Opção de diversificação e aproveitamento do sistema produtivo.
+            </p>
+
+            <h4>Por que recomendamos?</h4>
+            <ul>
+                <li>Apresenta sistema radicular profundo.</li>
+                <li>Contribui para a diversificação de culturas.</li>
+                <li>Pode aproveitar nutrientes em camadas mais profundas.</li>
+                <li>Possibilita uma alternativa de produção e renda.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>20°C a 30°C</strong></p>
+                <p>Chuva: <strong>400 a 600 mm no ciclo</strong></p>
+                <p>Época: <strong>Conforme calendário regional</strong></p>
+                <p>Adaptação: <strong>Tolerância moderada à seca</strong></p>
+            </div>
+        </div>
+    </article>
+
+</section>
+
+
+<!-- GRUPO 2: ALTERNATIVAS RAZOÁVEIS -->
+<section class="grupo-recomendacao grupo-amarelo">
+
+    <h3 class="grupo-titulo">Alternativas razoáveis</h3>
+
+    <!-- 1. FEIJÃO -->
+    <article class="card card-amarelo">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">1º LUGAR</span>
+                <h3>Feijão</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Possibilidade de cultivo com atenção ao manejo.
+            </p>
+
+            <h4>Por que considerar?</h4>
+            <ul>
+                <li>Pode diversificar o sistema produtivo.</li>
+                <li>Possui ciclo relativamente curto e pode deixar o solo mais descompactado.</li>
+                <li>Permite diversificação de renda na propriedade.</li>
+                <li>Exige atenção ao histórico de doenças e pragas.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>18°C a 30°C</strong></p>
+                <p>Chuva: <strong>300 a 450 mm no ciclo</strong></p>
+                <p>Época: <strong>Conforme calendário regional</strong></p>
+                <p>Adaptação: <strong>Exige manejo hídrico</strong></p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 2. SORGO -->
+    <article class="card card-amarelo">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">2º LUGAR</span>
+                <h3>Sorgo</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Alternativa com potencial de adaptação a condições de menor disponibilidade hídrica.
+            </p>
+
+            <h4>Por que considerar?</h4>
+            <ul>
+                <li>Apresenta boa tolerância relativa à seca.</li>
+                <li>Pode ser utilizado para produção de grãos ou forragem, deixando o solo mais descompactado.</li>
+                <li>Contribui para a diversificação do sistema.</li>
+                <li>É necessário avaliar o histórico fitossanitário da área.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>25°C a 32°C</strong></p>
+                <p>Chuva: <strong>400 a 600 mm no ciclo</strong></p>
+                <p>Época: <strong>Verão / safrinha</strong></p>
+                <p>Adaptação: <strong>Boa tolerância à seca</strong></p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 3. MILHO -->
+    <article class="card card-amarelo">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">3º LUGAR</span>
+                <h3>Milho</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Alternativa produtiva que depende do histórico e das condições da área.
+            </p>
+
+            <h4>Por que considerar?</h4>
+            <ul>
+                <li>Possui ampla utilização comercial.</li>
+                <li>Permite diversificação em relação a outras culturas.</li>
+                <li>Pode contribuir para a produção de palhada.</li>
+                <li>Exige atenção à disponibilidade de água e nutrientes.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>20°C a 30°C</strong></p>
+                <p>Chuva: <strong>500 a 800 mm no ciclo</strong></p>
+                <p>Época: <strong>Conforme zoneamento</strong></p>
+                <p>Adaptação: <strong>Exige boa disponibilidade hídrica</strong></p>
+            </div>
+        </div>
+    </article>
+
+</section>
+
+
+<!-- GRUPO 3: NÃO RECOMENDADAS -->
+<section class="grupo-recomendacao grupo-vermelho">
+
+    <h3 class="grupo-titulo">Culturas não recomendadas</h3>
+
+    <!-- 1. SOJA -->
+    <article class="card card-vermelho">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">1º LUGAR</span>
+                <h3>Soja</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Menor adequação ao cenário hipotético analisado.
+            </p>
+
+            <h4>Por que evitar?</h4>
+            <ul>
+                <li>O cultivo sucessivo pode favorecer a manutenção de doenças específicas.</li>
+                <li>Há necessidade de avaliar o histórico de pragas da área.</li>
+                <li>Pode não atender ao objetivo de diversificação da rotação.</li>
+                <li>Requer análise da fertilidade e do histórico fitossanitário.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>20°C a 30°C</strong></p>
+                <p>Chuva: <strong>450 a 800 mm no ciclo</strong></p>
+                <p>Época: <strong>Conforme zoneamento</strong></p>
+                <p>Adaptação: <strong>Depende da cultivar</strong></p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 2. ALGODÃO -->
+    <article class="card card-vermelho">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">2º LUGAR</span>
+                <h3>Algodão</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Cultura que pode exigir condições específicas de manejo e investimento.
+            </p>
+
+            <h4>Por que evitar?</h4>
+            <ul>
+                <li>Possui manejo fitossanitário complexo.</li>
+                <li>Exige monitoramento frequente de pragas.</li>
+                <li>Pode demandar maior investimento operacional.</li>
+                <li>É necessário avaliar as condições locais de cultivo.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>20°C a 30°C</strong></p>
+                <p>Chuva: <strong>500 a 1.000 mm no ciclo</strong></p>
+                <p>Época: <strong>Conforme zoneamento</strong></p>
+                <p>Adaptação: <strong>Sensível ao excesso de umidade</strong></p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 3. TRIGO -->
+    <article class="card card-vermelho">
+
+        <button class="card-resumo" type="button"
+                aria-expanded="false" onclick="expandirCard(this)">
+            <div class="card-identificacao">
+                <span class="card-posicao">3º LUGAR</span>
+                <h3>Trigo</h3>
+            </div>
+            <span class="card-seta">⌄</span>
+        </button>
+
+        <div class="card-conteudo">
+            <p class="descricao">
+                Alternativa que pode apresentar limitações conforme as condições climáticas regionais.
+            </p>
+
+            <h4>Por que evitar?</h4>
+            <ul>
+                <li>Depende de condições climáticas adequadas durante o ciclo.</li>
+                <li>Pode apresentar maior risco em regiões muito quentes.</li>
+                <li>Exige avaliação do calendário agrícola regional.</li>
+                <li>Necessita de análise da viabilidade econômica local.</li>
+            </ul>
+
+            <h4>Características meteorológicas</h4>
+            <div class="clima">
+                <p>Temperatura ideal: <strong>15°C a 25°C</strong></p>
+                <p>Chuva: <strong>450 a 600 mm no ciclo</strong></p>
+                <p>Época: <strong>Outono / inverno</strong></p>
+                <p>Adaptação: <strong>Depende da região e cultivar</strong></p>
+            </div>
+        </div>
+    </article>
+
+    </section>
+
+            </div>
+        <!-- ESTATÍSTICAS -->
+
+        <section class="estatisticas">
+
+            <div>
+                <h2>Quer entender os dados por trás das recomendações?</h2>
+
+                <p>
+                    Consulte gráficos, indicadores de produtividade,
+                    características do solo, dados climáticos e estudos
+                    utilizados para fundamentar as recomendações.
+                </p>
+            </div>
+
+            <a href="estatisticas.html" class="botao-estatisticas">
+                Acessar estatísticas →
+            </a>
+
+        </section>
+
+    </main>
+
+    <!-- RODAPÉ -->
+
+    <footer>
+        DataLab © 2026 | Plataforma de apoio à decisão do produtor.
+
+        <br><br>
+
+        Dados, recomendações e indicadores apresentados nesta versão são fictícios.
+    </footer>
+
+    <!-- JAVASCRIPT -->
+
+    <script>
+
+        // CIDADES DISPONÍVEIS POR ESTADO
+
+        const cidades = {
+
+            MG: ["Uberlândia", "Uberaba", "Araguari", "Patos de Minas"],
+
+            GO: ["Goiânia", "Rio Verde", "Jataí"],
+
+            SP: ["Ribeirão Preto", "Campinas", "São Paulo"],
+
+            MT: ["Cuiabá", "Rondonópolis", "Sorriso"],
+
+            MS: ["Campo Grande", "Dourados", "Três Lagoas"]
+
+        };
+
+
+        // FILTRAGEM DE CIDADES
+
+        const estado = document.getElementById("estado");
+        const cidade = document.getElementById("cidade");
+
+        estado.addEventListener("change", function() {
+
+            const estadoSelecionado = this.value;
+
+            cidade.innerHTML = "";
+
+            if (!estadoSelecionado) {
+
+                cidade.disabled = true;
+
+                cidade.innerHTML =
+                    '<option value="">Selecione primeiro o estado</option>';
+
+                return;
+
+            }
+
+            cidade.disabled = false;
+
+            cidade.innerHTML =
+                '<option value="">Selecione a cidade</option>';
+
+            cidades[estadoSelecionado].forEach(function(nomeCidade) {
+
+                const opcao = document.createElement("option");
+
+                opcao.value = nomeCidade;
+                opcao.textContent = nomeCidade;
+
+                cidade.appendChild(opcao);
+
+            });
+
+        });
+
+
+        // FUNÇÃO PARA CAPTURAR CHECKBOXES MARCADOS
+
+        function valoresMarcados(nome) {
+
+            return Array.from(
+                document.querySelectorAll(
+                    `input[name="${nome}"]:checked`
+                )
+            ).map(item => item.value);
+
+        }
+
+
+        // SIMULAÇÃO DA ANÁLISE
+
+        function analisarArea() {
+
+            const plantio1 =
+                document.getElementById("plantio1").value;
+
+            const plantio2 =
+                document.getElementById("plantio2").value;
+
+            const cidadeSelecionada = cidade.value;
+
+            const estadoSelecionado = estado.value;
+
+            const data =
+                document.getElementById("dataPlantio").value;
+
+            const cultura =
+                document.getElementById("culturaDesejada").value;
+
+            // Captura independente dos problemas e objetivos
+
+            const problemas = valoresMarcados("problemas");
+
+            const objetivos = valoresMarcados("objetivos");
+
+
+            // VALIDAÇÃO
+
+            if (!plantio1 || !plantio2 || !cidadeSelecionada || !data) {
+
+                alert(
+                    "Preencha os dois últimos plantios, a localização e a data prevista."
+                );
+
+                return;
+
+            }
+
+
+            // FORMATAÇÃO DA DATA
+
+            const dataFormatada =
+                data.split("-").reverse().join("/");
+
+
+            // ATUALIZAÇÃO DO RESUMO
+
+            const resumo = document.getElementById("resumo");
+
+            resumo.innerHTML = `
+
+                Área analisada:
+                <strong>${cidadeSelecionada} - ${estadoSelecionado}</strong>
+
+                | Histórico:
+                <strong>${plantio1} → ${plantio2}</strong>
+
+                | Próximo plantio:
+                <strong>${dataFormatada}</strong>
+
+                | Cultura desejada:
+                <strong>${cultura || "Sem preferência"}</strong>
+
+                <br><br>
+
+                Problemas identificados:
+                ${problemas.join(", ") || "Nenhum informado"}
+
+                <br>
+
+                Objetivos:
+                ${objetivos.join(", ") || "Nenhum informado"}
+
+                <br><br>
+
+                <em>
+                    As recomendações exibidas são demonstrativas e ainda não
+                    são calculadas automaticamente com base nos dados informados.
+                </em>
+
+            `;
+
+
+            // ROLAGEM ATÉ OS RESULTADOS
+
+            document.getElementById("resultados").scrollIntoView({
+
+                behavior: "smooth"
+
+            });
+
+            // EXPANSÃO DOS CARDS
+
+        }
+
+        // EXPANSÃO DOS CARDS
+    function expandirCard(botao) {
+
+    // Localiza o card ao qual o botão clicado pertence
+        const card = botao.closest(".card");
+
+    // Verifica se o card já está aberto
+        const estaAberto = card.classList.contains("aberto");
+
+    // Adiciona ou remove a classe "aberto"
+        card.classList.toggle("aberto");
+
+    // Atualiza o atributo de acessibilidade do botão
+        botao.setAttribute("aria-expanded", String(!estaAberto));
+    }
+
+    </script>
+
+</body>
+</html>

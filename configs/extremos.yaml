@@ -1,0 +1,134 @@
+# Torre 7: probabilidade de extremos climáticos (schema em towers/t7_extremos/config.py).
+# status: PROVISORIO (valor de trabalho) | DEFINIDO (fechado, com fonte)
+# valor: null = ainda não escolhido (o cálculo para em vez de inventar um número)
+
+referencia:
+  arquivo: data/raw/power/dados_unificados.csv
+  ano_inicio: 2000
+  ano_fim: 2021            # 2022 em diante é do ML
+  fonte_dados: "NASA POWER diário (reanálise MERRA-2, grade 0,5° x 0,625°): PRECTOTCORR, T2M, T2M_MAX, T2M_MIN, RH2M, WS2M; pontos P01–P20 (coordenadas a obter)"
+  data_download: null      # a obter
+
+bootstrap:                 # IC por sorteio de anos inteiros, com reposição
+  repeticoes: 1000
+  semente: 42
+  nivel_ic: 0.95
+
+limiares:
+  chuva_extrema:
+    valor: 80.0            # evento = chuva em 3 dias > 80 mm
+    unidade: mm
+    janela_dias: 3
+    fonte: "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 80 mm deixa P(>=1 evento) entre 0,33 e 0,71 em todos; não é critério de dano agronômico"
+    vigencia: "2026-11-14"
+    status: PROVISORIO
+    grade_sensibilidade: []   # vazio = grade padrão do script de sensibilidade
+
+  queda_temperatura:
+    valor: 5.0             # evento = queda de T2M em 2 dias >= 5 °C
+    unidade: °C
+    janela_dias: 2
+    absoluto: false        # false = só esfriamento
+    fonte: "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 5 °C deixa P(>=1 evento) entre 0,19 e 0,67 em todos; não é critério de dano agronômico"
+    vigencia: "2026-11-14"
+    status: PROVISORIO
+    grade_sensibilidade: [3.0, 4.0, 5.0, 6.0]
+
+  estiagem:                # informativo
+    n_dias: 10
+    n_dias_status: PROVISORIO
+    limiar_amplitude_alta: null   # a definir (anomalia em °C)
+    limiar_amplitude_alta_status: PROVISORIO
+    janela_climatologia_dias: 31
+    fonte: "análise preliminar em um único ponto (2000–2021)"
+
+enso:                      # condicionante; sem índice = "nao_calculado"
+  indice: RONI             # ONI relativo: índice oficial da NOAA/CPC desde 01/02/2026 (PNS26-05)
+  url: https://www.cpc.ncep.noaa.gov/data/indices/RONI.ascii.txt   # baixado na hora, com cache (sem CSV no repo)
+  limiar_el_nino: 0.5      # RONI >= +0,5 °C (média de 3 meses) = El Niño; <= -0,5 °C = La Niña (NOAA/CPC)
+  limiar_la_nina: -0.5
+  cache_dias: 7
+  tabela: null             # (consulta.py) CSV ano → fase; o recomendador usa a url acima
+  fase_atual: null         # null = fase do último trimestre publicado pela NOAA (persistência)
+  k: 10.0                  # p_final = (n·p_enso + k·p_clim) / (n + k)
+  k_status: PROVISORIO
+  repeticoes_permutacao: 10000
+  fonte: "limiares de fase: NOAA/CPC (RONI, ±0,5 °C). k = 10: peso da climatologia, não é limiar da literatura; ajustar por validação por ano"
+
+gpd:                       # GPD: na safra, substitui o empírico só na chuva (pontos aprovados)
+  quantil_limiar: 0.95     # u = quantil 0,95 da série da safra; ξ estável entre 0,90 e 0,975 no P06
+  grade_quantis: [0.90, 0.95, 0.975]
+  r_chuva: 3               # declustering: 3 dias abaixo de u encerram o grupo (soma é de 3 dias)
+  r_queda: 2
+  repeticoes_bootstrap: 200
+  periodos_retorno: [10.0, 20.0]
+  estabilidade_repeticoes: 200
+  estabilidade_fracao: 0.85
+  estabilidade_T: 10.0
+  criterio_razao: 1.5
+  criterio_dp_xi: 0.20
+  usar_na_chuva: true      # safra out–mar: chuva extrema pela GPD nos pontos aprovados; demais, empírico
+  exigir_concordancia: true   # e só onde o valor empírico cai dentro do IC da GPD
+  resultado: artifacts/t7/gpd/gpd_por_ponto.csv   # gerado por `python -m scripts.t7_gpd`
+
+# --------------------------------------------------------------------------------------------------
+# Eventos e fases por cultura (recomendador: towers/t7_extremos/torre.py)
+# Eventos: chuva_dia (chuva >= valor em 1 dia), chuva_persistente (N dias seguidos com chuva >= mínima),
+# frio (T2M_MIN < frio_tmin da cultura), chuva_extrema e queda_brusca (limiares gerais acima).
+# Fases: dias [a, b] após o plantio, ciclo [fa, fb] em fração do ciclo, ou ultimos_dias N.
+# As frações do ciclo são aproximações da fenologia (a validar com o agro). Perenes e silvicultura: só a fase
+# "estabelecimento".
+culturas:
+  chuva_dia:
+    valor: 50.0
+    unidade: mm
+    fonte: "INMET, avisos de chuvas intensas: 50 a 100 mm/dia = perigo (laranja). Risco de erosão e de arrastar a semente no estabelecimento. Na grade da POWER (~50 km, suaviza picos): P de 0,04 a 0,12 nos 20 dias após o plantio em 5 regiões"
+    status: PROVISORIO
+  chuva_persistente:
+    dias: 5
+    chuva_minima_mm: 5.0
+    fonte: "sem limiar na literatura (na colheita o dano vem da persistência: Embrapa Soja, Trigo e Algodão). Critério estatístico, como os da T7: na colheita da soja em 5 regiões (GO, MT, PR, BA, RS; 2001–2025), 5 dias seguidos >= 5 mm deixa P entre 0,20 e 0,68; 3 dias >= 1 mm dava 0,96–1,00 (não discrimina)"
+    status: PROVISORIO
+
+  padrao:                  # culturas sem limiar próprio: eventos gerais da T7
+    - &estabelecimento {nome: estabelecimento, dias: [0, 20], eventos: [chuva_dia]}
+    - {nome: floracao, ciclo: [0.40, 0.65], eventos: [queda_brusca]}
+    - {nome: colheita, ultimos_dias: 20, eventos: [chuva_extrema]}
+
+  por_cultura:
+    soja:
+      fonte: "Embrapa Soja: < 13 °C só retarda a floração (sem evento de frio; geada na T1); chuva persistente do fim do enchimento à maturação causa grão ardido, mofado e germinado"
+      fases:
+        - *estabelecimento
+        - {nome: maturacao_colheita, ciclo: [0.80, 1.0], eventos: [chuva_persistente]}
+    milho:
+      frio_tmin: 12.0
+      fonte: "Embrapa Milho e Sorgo (Ecofisiologia do milho 2ª safra): abaixo de 12 °C na floração e no enchimento de grãos a produção fica comprometida"
+      fases:
+        - *estabelecimento
+        - {nome: floracao_enchimento, ciclo: [0.45, 0.80], eventos: [frio]}
+    feijao:
+      frio_tmin: 12.0
+      fonte: "Embrapa Arroz e Feijão: abaixo de 12 °C na floração há aborto de flores e vagens"
+      fases:
+        - *estabelecimento
+        - {nome: floracao, ciclo: [0.40, 0.60], eventos: [frio]}
+        - {nome: colheita, ciclo: [0.85, 1.0], eventos: [chuva_persistente]}
+    arroz: &arroz
+      frio_tmin: 17.0
+      fonte: "Embrapa Arroz e Feijão: abaixo de 15 °C (cultivares tolerantes) a 20 °C (sensíveis) no emborrachamento e na floração há esterilidade das espiguetas; 17 °C = meio da faixa"
+      fases:
+        - *estabelecimento
+        - {nome: emborrachamento_floracao, ciclo: [0.50, 0.70], eventos: [frio]}
+        - {nome: colheita, ciclo: [0.85, 1.0], eventos: [chuva_persistente]}
+    arroz-irrigado: *arroz
+    trigo:
+      fonte: "Embrapa Trigo: o período mais crítico para germinação na espiga é ~20 dias antes da colheita (geada no espigamento fica na T1)"
+      fases:
+        - *estabelecimento
+        - {nome: pre_colheita, ultimos_dias: 20, eventos: [chuva_persistente]}
+    algodao-herbaceo:
+      fonte: "Embrapa Algodão: chuva persistente na abertura dos capulhos amarela e enfraquece a fibra"
+      fases:
+        - *estabelecimento
+        - {nome: abertura_capulhos, ciclo: [0.70, 1.0], eventos: [chuva_persistente]}

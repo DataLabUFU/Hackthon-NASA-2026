@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.venv/
+artifacts/
+catboost_info/
+predictions/
+
+# Dados baixados (ex.: scripts/download_zarc.py)
+/data/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Segredos do Streamlit (credenciais do NeonDB): nunca versionar
+.streamlit/secrets.toml

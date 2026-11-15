@@ -1,0 +1,68 @@
+{
+  "gerado_em": "2026-11-15T11:56:59",
+  "arquivo_dados": "data/raw/power/dados_unificados.csv",
+  "sha256_dados": "3d7687c0bdd8ba95a6408c984b1d90755efd92a5ae171fbe4a516bf555ae0408",
+  "anos": [
+    2000,
+    2021
+  ],
+  "limiares": {
+    "chuva_extrema": {
+      "valor": 80.0,
+      "unidade": "mm",
+      "janela_dias": 3,
+      "fonte": "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 80 mm deixa P(>=1 evento) entre 0,33 e 0,71 em todos; não é critério de dano agronômico",
+      "vigencia": "2026-11-14",
+      "status": "PROVISORIO",
+      "grade_sensibilidade": []
+    },
+    "queda_temperatura": {
+      "valor": 5.0,
+      "unidade": "°C",
+      "janela_dias": 2,
+      "absoluto": false,
+      "fonte": "critério estatístico: na sensibilidade dos 20 pontos (safra out–mar, 2000–2021), 5 °C deixa P(>=1 evento) entre 0,19 e 0,67 em todos; não é critério de dano agronômico",
+      "vigencia": "2026-11-14",
+      "status": "PROVISORIO",
+      "grade_sensibilidade": [
+        3.0,
+        4.0,
+        5.0,
+        6.0
+      ]
+    },
+    "estiagem": {
+      "n_dias": 10,
+      "n_dias_status": "PROVISORIO",
+      "limiar_amplitude_alta": null,
+      "limiar_amplitude_alta_status": "PROVISORIO",
+      "janela_climatologia_dias": 31,
+      "fonte": "análise preliminar em um único ponto (2000–2021)"
+    }
+  },
+  "gpd_na_chuva": true,
+  "gpd_exigir_concordancia": true,
+  "pontos_chuva_gpd": [
+    "P01",
+    "P03",
+    "P04",
+    "P05",
+    "P07",
+    "P08",
+    "P09",
+    "P11",
+    "P17",
+    "P19"
+  ],
+  "bootstrap": {
+    "repeticoes": 1000,
+    "semente": 42,
+    "nivel_ic": 0.95
+  },
+  "versoes": {
+    "python": "3.15.2",
+    "pandas": "3.1.1",
+    "numpy": "2.5.4",
+    "omegaconf": "2.4.0"
+  }
+}
