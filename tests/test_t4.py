@@ -35,7 +35,8 @@ def tabua(tmp_path):
 def catalogo():
     return pl.DataFrame([
         {"id_cultura": c, "nome_pt": n, "uso": "agricultura", "modo": "safra", "obrigatoria": True, "escala_cultivo": 0}
-        for c, n in [("soja", "Soja"), ("algodao-herbaceo", "Algodão herbáceo"), ("arroz", "Arroz"), ("cacau", "Cacau")]
+        for c, n in [("soja", "Soja"), ("algodao-herbaceo", "Algodão herbáceo"), ("arroz", "Arroz"),
+                     ("arroz-irrigado", "Arroz irrigado"), ("cacau", "Cacau")]
     ])
 
 
@@ -79,8 +80,10 @@ def test_sem_zoneamento_e_nulo(tabua):
 
 
 def test_irrigado_so_quando_pedido(tabua):
-    assert item(t4(tabua), "arroz", date(2026, 10, 15))["zarc_status"] == "sem_zoneamento"
-    assert item(t4(tabua, irrigado=True), "arroz", date(2026, 10, 15))["zarc_status"] == "indicado"
+    # o ZARC irrigado do arroz vai para o "Arroz irrigado"; o "Arroz" (sequeiro) não recebe essas linhas
+    assert item(t4(tabua), "arroz-irrigado", date(2026, 10, 15))["zarc_status"] == "sem_zoneamento"
+    assert item(t4(tabua, irrigado=True), "arroz-irrigado", date(2026, 10, 15))["zarc_status"] == "indicado"
+    assert item(t4(tabua, irrigado=True), "arroz", date(2026, 10, 15))["zarc_status"] == "sem_zoneamento"
 
 
 def test_solo_desconhecido_usa_o_melhor_solo(tabua):
@@ -90,4 +93,4 @@ def test_solo_desconhecido_usa_o_melhor_solo(tabua):
 
 def test_ordenacao_com_nulos_por_ultimo(tabua):
     r = t4(tabua)
-    assert r["score_t4"].tail(3).null_count() == 3
+    assert r["score_t4"].tail(4).null_count() == 4

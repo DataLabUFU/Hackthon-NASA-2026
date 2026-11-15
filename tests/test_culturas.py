@@ -139,10 +139,10 @@ def test_conflito_de_nome():
 
 
 def test_cultura_curada_mantem_id_limpo_mesmo_com_variantes(cat):
-    arroz = cat.filter(pl.col("nome_pt") == "Arroz")
+    arroz = cat.filter(pl.col("nome_pt") == "Arroz irrigado")
     assert arroz.height >= 2                                            # curada + subespécies herdadas
-    assert arroz.filter("obrigatoria")["id_cultura"].to_list() == ["arroz"]
-    assert all(i.startswith("arroz--") for i in arroz.filter(~pl.col("obrigatoria"))["id_cultura"].to_list())
+    assert arroz.filter("obrigatoria")["id_cultura"].to_list() == ["arroz-irrigado"]
+    assert all(i.startswith("arroz-irrigado--") for i in arroz.filter(~pl.col("obrigatoria"))["id_cultura"].to_list())
 
 
 
@@ -167,3 +167,12 @@ def test_tipo_de_cultura():
     assert (so_graos["tipo_cultura"] == "graos").all() and so_graos.height < vis.height
     with pytest.raises(ValueError):
         culturas_exibiveis(cat, tipos=["joias"])
+
+
+
+def test_arroz_de_sequeiro_e_irrigado(cat):
+    seq = cultura(cat, "Arroz")
+    irr = cat.filter((pl.col("nome_pt") == "Arroz irrigado") & pl.col("obrigatoria")).row(0, named=True)
+    assert seq["id_cultura"] == "arroz" and irr["id_cultura"] == "arroz-irrigado"
+    assert (seq["RMIN"], seq["ROPMN"]) == (350, 500) and "Embrapa" in seq["fonte_parametros"]
+    assert irr["ROPMN"] >= 1500 and irr["fonte_parametros"] == "ECOCROP (FAO)"     # inundação: só com irrigação

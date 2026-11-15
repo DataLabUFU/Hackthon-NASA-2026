@@ -95,3 +95,11 @@ def test_score_limitado_e_explicado():
     soja = r.filter(pl.col("id_cultura") == "soja").row(0, named=True)
     assert len(soja["explicacao_rotacao"]) == 2 and soja["historico"] == "Soja → Soja"
     assert r["score_t5"].tail(2).null_count() == 2          # nulos por último
+
+
+
+def test_historico_fora_dos_tipos_filtrados():
+    """O filtro de tipos limita o que se recomenda, não o que já se plantou (erro "Milho não encontrado")."""
+    so_soja = CAT.filter(pl.col("id_cultura") == "soja")
+    r = avaliar_t5("Milho", "Soja", culturas=so_soja, catalogo_historico=CAT, colapsar_variantes=False)
+    assert r.height == 1 and r["regras_rotacao"].to_list() == [["apos_graminea"]]

@@ -117,7 +117,7 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
         "t3": lambda: avaliar_t3(lat, lon, problemas_solo=problemas_solo, analise=analise_solo, **comum),
         "t4": lambda: avaliar_t4(lat, lon, data_plantio, geocodigo=geocodigo, irrigado=irrigado,
                                  solo=solo_compartilhado(), **comum),
-        "t5": lambda: avaliar_t5(ultimo, penultimo, **comum),
+        "t5": lambda: avaliar_t5(ultimo, penultimo, catalogo_historico=catalogo.filter("exibivel"), **comum),
         "t6": lambda: avaliar_t6(lat, lon, data_plantio, geocodigo=geocodigo, imovel=imovel, irrigado=irrigado,
                                  solo=solo_compartilhado(), **comum),
     }

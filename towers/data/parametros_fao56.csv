@@ -17,7 +17,6 @@ trigo,0.3,1.15,0.3,0.148,0.185,0.444,0.223,1.2,0.55,1.15,"FAO-56 (Tab. 11 fases,
 cevada,0.3,1.15,0.25,0.125,0.208,0.417,0.25,1.2,0.55,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
 aveia-branca,0.3,1.15,0.25,0.125,0.208,0.417,0.25,1.2,0.55,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
 aveia-preta,0.3,1.15,0.25,0.125,0.208,0.417,0.25,1.2,0.55,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",120
-arroz--oryza-sativa,1.05,1.2,0.75,0.2,0.2,0.4,0.2,0.7,0.2,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",150
 sorgo-granifero,0.3,1.05,0.55,0.16,0.28,0.32,0.24,1.4,0.55,0.9,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",125
 sorgo-forrageiro,0.3,1.05,0.55,0.16,0.28,0.32,0.24,1.4,0.55,0.9,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",125
 girassol,0.35,1.1,0.35,0.192,0.269,0.346,0.193,1.2,0.45,0.95,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",130
@@ -49,3 +48,5 @@ uva,0.3,0.85,0.45,0.1,0.1,0.6,0.2,1.5,0.35,0.85,"FAO-56 (Tab. 11 fases, 12 Kc, 2
 abacaxi,0.5,0.3,0.3,0.1,0.1,0.6,0.2,0.45,0.5,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",
 canola,0.35,1.1,0.35,0.172,0.241,0.379,0.208,1.2,0.6,,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",145
 alfafa,0.4,0.95,0.9,0.1,0.2,0.5,0.2,1.2,0.55,1.1,"FAO-56 (Tab. 11 fases, 12 Kc, 22 raiz/p); FAO-33 (Ky)",
+arroz,0.3,1.15,0.5,0.167,0.25,0.333,0.25,0.7,0.4,,"Arroz de terras altas: FAO-56 não tabela o sequeiro; Kc e fases de cereal de sequeiro (FAO-56 Tab. 12), raiz da Tab. 22 (arroz, 0,5-1,0 m), p = 0,4 (coerente com o manejo da Embrapa, que irriga ao atingir 50% da água disponível) e ciclo de 120 dias (cultivares precoces, Embrapa)",120
+arroz-irrigado,1.05,1.2,0.75,0.2,0.2,0.4,0.2,0.7,0.2,,"FAO-56 (Tab. 11 fases, 12 Kc de arroz irrigado, 22 raiz/p); Ky do grupo (FAO-33 sem valor)",150

@@ -78,13 +78,18 @@ def ajustes_rotacao(atual: dict, ultimo: dict | None, penultimo: dict | None) ->
 
 
 def avaliar_t5(ultimo: str | None = None, penultimo: str | None = None, culturas: pl.DataFrame | None = None,
+               catalogo_historico: pl.DataFrame | None = None,
                incluir_silvicultura: bool = True, colapsar_variantes: bool = True) -> pl.DataFrame:
     """Score da T5 (rotação) para todas as culturas exibíveis, ordenado."""
+    # ``culturas`` pode vir filtrada por tipo (o que se recomenda); o histórico (o que já se plantou) é procurado
+    # em ``catalogo_historico`` ou, sem ele, no catálogo completo
     catalogo_completo = carregar_culturas().filter("exibivel") if culturas is None else culturas
+    catalogo_historico = catalogo_historico if catalogo_historico is not None else (
+        catalogo_completo if culturas is None else carregar_culturas().filter("exibivel"))
     if culturas is None:
         culturas = culturas_exibiveis(catalogo_completo, incluir_silvicultura=incluir_silvicultura)
-    u = resolver_cultura(ultimo, catalogo_completo)
-    pu = resolver_cultura(penultimo, catalogo_completo)
+    u = resolver_cultura(ultimo, catalogo_historico)
+    pu = resolver_cultura(penultimo, catalogo_historico)
 
     linhas = []
     for r in culturas.iter_rows(named=True):

@@ -10,7 +10,7 @@ Algodão herbáceo,Gossypium hirsutum,Gossypium hirsutum,reprodutiva,agricultura
 Algodão arbóreo,Gossypium barbadense,Gossypium barbadense,reprodutiva,agricultura,,PAM/IBGE,ok,PAM 'algodão arbóreo' é o mocó (G. hirsutum var. marie-galante); G. barbadense é aproximação
 Alho,Allium sativum,Allium sativum,vegetativa,agricultura,,PAM/IBGE,ok,
 Amendoim,Arachis hypogaea,Arachis hypogaea,reprodutiva,agricultura,,PAM/IBGE; ZARC/MAPA,ok,
-Arroz,Oryza sativa,Oryza sativa,reprodutiva,agricultura,,PAM/IBGE; ZARC/MAPA,ok,
+Arroz,Oryza sativa (terras altas),Oryza sativa sequeiro,reprodutiva,agricultura,,PAM/IBGE; ZARC/MAPA,culturas_extra (parâmetros de sequeiro),arroz de terras altas (sequeiro); o arroz por inundação é a linha 'Arroz irrigado'
 Aveia-branca,Avena sativa,Avena sativa,reprodutiva,agricultura,,PAM/IBGE; ZARC/MAPA,ok,
 Azeitona (oliveira),Olea europaea,Olea europaea,reprodutiva,agricultura,,PAM/IBGE,ok,
 Banana,Musa acuminata x balbisiana,Musa acuminata x balbisiana,reprodutiva,agricultura,,PAM/IBGE,ok,
@@ -150,3 +150,4 @@ Acácia-negra,Acacia mearnsii,Acacia mearnsii,vegetativa,silvicultura,,curadoria
 Mogno-africano,Khaya senegalensis,Khaya senegalensis,vegetativa,silvicultura,,curadoria: silvicultura,ok,
 Paricá,Schizolobium parahyba var. amazonicum,Schizolobium parahybum,vegetativa,silvicultura,,curadoria: silvicultura,"readmitir (fora do filtro de categoria, mas com temperatura)",
 Milho-doce,Zea mays ssp. saccharata,Zea mays ssp. saccharata,reprodutiva,agricultura,,curadoria: hortaliça,ok,subespécie de Zea mays; produto diferente do milho-grão (não herda o nome 'Milho')
+Arroz irrigado,Oryza sativa (irrigado por inundação),Oryza sativa,reprodutiva,agricultura,,PAM/IBGE; ZARC/MAPA,ok,arroz irrigado por inundação: viável quando o produtor irriga (parâmetros originais do ECOCROP)

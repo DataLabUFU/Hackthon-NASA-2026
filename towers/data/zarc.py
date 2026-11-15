@@ -142,6 +142,9 @@ def tabua(geocodigos: Iterable[str] | None = None, caminho: Path | str = CAMINHO
             irrigado=pl.col("Nome_cultura").str.contains("Irrigad") | (manejo.fill_null("") == "Irrigado"),
         )
         .drop_nulls("id_cultura")
+        # arroz irrigado por inundação é outra cultura no catálogo ("Arroz irrigado"); o "Arroz" é o de sequeiro
+        .with_columns(id_cultura=pl.when((pl.col("id_cultura") == "arroz") & pl.col("irrigado"))
+                      .then(pl.lit("arroz-irrigado")).otherwise(pl.col("id_cultura")))
         .filter(pl.col("SafraIni") == pl.col("SafraIni").max().over("id_cultura"))
     )
     if not incluir_irrigado:
