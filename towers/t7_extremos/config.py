@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -75,6 +75,11 @@ class Estiagem:
 class Enso:
     indice: Optional[str] = None
     """Índice usado para classificar as fases (ex.: RONI ou ONI, da NOAA)."""
+    url: Optional[str] = None
+    """Arquivo do índice baixado na hora (texto ``SEAS YR ANOM`` da NOAA/CPC); null = ENSO não calculado."""
+    limiar_el_nino: float = 0.5
+    limiar_la_nina: float = -0.5
+    cache_dias: int = 7
     tabela: Optional[str] = None
     """CSV com colunas ``ano`` e ``fase``; null = ENSO não calculado."""
     fase_atual: Optional[str] = None
@@ -108,6 +113,52 @@ class Gpd:
 
 
 @dataclass
+class ChuvaDia:
+    valor: Optional[float] = None
+    unidade: str = "mm"
+    fonte: str = ""
+    status: str = "PROVISORIO"
+
+
+@dataclass
+class ChuvaPersistente:
+    dias: int = 3
+    chuva_minima_mm: float = 1.0
+    fonte: str = ""
+    status: str = "PROVISORIO"
+
+
+@dataclass
+class Fase:
+    nome: str = ""
+    dias: Optional[List[float]] = None
+    """[início, fim] em dias após o plantio."""
+    ciclo: Optional[List[float]] = None
+    """[início, fim] em fração do ciclo (0 = plantio, 1 = colheita)."""
+    ultimos_dias: Optional[int] = None
+    """Os N últimos dias do ciclo."""
+    eventos: List[str] = field(default_factory=list)
+
+
+@dataclass
+class CulturaExtremos:
+    frio_tmin: Optional[float] = None
+    """Evento ``frio``: temperatura mínima do dia (T2M_MIN) abaixo deste valor na fase."""
+    frio_status: str = "PROVISORIO"
+    fonte: str = ""
+    fases: List[Fase] = field(default_factory=list)
+
+
+@dataclass
+class Culturas:
+    """Eventos e fases por cultura usados pelo recomendador (``torre.py``)."""
+    chuva_dia: ChuvaDia = field(default_factory=ChuvaDia)
+    chuva_persistente: ChuvaPersistente = field(default_factory=ChuvaPersistente)
+    padrao: List[Fase] = field(default_factory=list)
+    por_cultura: Dict[str, CulturaExtremos] = field(default_factory=dict)
+
+
+@dataclass
 class Limiares:
     chuva_extrema: ChuvaExtrema = field(default_factory=ChuvaExtrema)
     queda_temperatura: QuedaTemperatura = field(default_factory=QuedaTemperatura)
@@ -121,6 +172,7 @@ class ConfigExtremos:
     limiares: Limiares = field(default_factory=Limiares)
     enso: Enso = field(default_factory=Enso)
     gpd: Gpd = field(default_factory=Gpd)
+    culturas: Culturas = field(default_factory=Culturas)
 
 
 def carregar_config(caminho: str | Path | None = None, overrides: list[str] | None = None) -> DictConfig:

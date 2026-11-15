@@ -225,8 +225,10 @@ def _notas(notas: list[dict]) -> None:
         "Solo: pH, textura, drenagem e fertilidade frente à exigência da cultura (problemas corrigíveis pesam menos).",
         "ZARC: risco do zoneamento oficial na data; culturas sem zoneamento ficam neutras (célula vazia).",
         "Rotação: efeito do seu histórico (ex.: gramínea depois de leguminosa ganha; repetir a cultura perde).",
-        "Extremos: 100 menos a chance (% dos anos desde 2001) de chuva acima de 80 mm em 3 dias ou queda de 5 °C "
-        "em 2 dias nas fases sensíveis do ciclo (estabelecimento, floração e colheita).",
+        "Extremos: 100 menos a chance de evento extremo nas fases sensíveis do ciclo de cada cultura (chuva ≥ 50 mm "
+        "num dia no estabelecimento; frio abaixo do limiar da cultura, ex.: feijão e milho < 12 °C na floração, arroz "
+        "< 17 °C no emborrachamento; 5 dias seguidos de chuva na colheita de soja, trigo, feijão, arroz e algodão), "
+        "ajustada pela fase atual do El Niño/La Niña (índice RONI da NOAA).",
         "Seus objetivos: quanto a cultura entrega o que você marcou (vazio quando nada foi marcado).",
     ])
 

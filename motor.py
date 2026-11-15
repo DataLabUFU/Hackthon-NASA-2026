@@ -448,17 +448,19 @@ def _alerta_solo(alerta: str, informou_compactacao: bool = False) -> str:
 
 
 def _frase_extremos(r: dict) -> str:
-    """T7: chance de chuva extrema ou queda brusca de temperatura nas fases sensíveis do ciclo."""
-    pe, pc, pq = r.get("p_extremo"), r.get("p_chuva_extrema"), r.get("p_queda_brusca")
+    """T7: chance de chuva forte/persistente ou de frio nas fases sensíveis do ciclo da cultura."""
+    pe, pc, pf = r.get("p_extremo"), r.get("p_extremo_chuva"), r.get("p_extremo_frio")
+    enso = r.get("enso_fase")
+    com_enso = f", considerando o {enso} atual" if enso in ("El Niño", "La Niña") else ""
     if pe == 0:
         return "nenhum extremo de chuva ou frio nas fases sensíveis do ciclo desde 2001"
     detalhe = []
     if pc:
-        detalhe.append(f"chuva extrema {_pct(pc)}")
-    if pq:
-        detalhe.append(f"queda brusca de temperatura {_pct(pq)}")
-    return (f"extremo climático em {_pct(pe)} dos anos nas fases sensíveis do ciclo"
-            + (f" ({', '.join(detalhe)})" if detalhe else ""))
+        detalhe.append(f"chuva forte ou persistente {_pct(pc)}")
+    if pf:
+        detalhe.append(f"frio na fase sensível {_pct(pf)}")
+    return (f"chance de extremo climático de {_pct(pe)}{com_enso}"
+            + (f" (no histórico desde 2001: {', '.join(detalhe)} dos anos)" if detalhe else ""))
 
 
 def _justificativas_do_local(r: dict, e: Entrada | None) -> list[str]:

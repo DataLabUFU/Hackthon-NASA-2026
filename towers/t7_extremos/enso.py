@@ -117,3 +117,60 @@ def probabilidade_enso(indicadores: pd.Series, fases: pd.Series | None, fase_atu
         out["p_permutacao"] = float(teste_permutacao(ev, na_fase, repeticoes_permutacao, semente))
     out["p_final"] = p_final(out["p_enso"], n_fase, out["p_clim"], k)
     return out
+
+
+# --------------------------------------------------------------------- índice da NOAA (sem CSV)
+ESTACOES = ("DJF", "JFM", "FMA", "MAM", "AMJ", "MJJ", "JJA", "JAS", "ASO", "SON", "OND", "NDJ")
+"""Trimestres da NOAA; o índice ``i`` é o trimestre centrado no mês ``i + 1`` (DJF = janeiro)."""
+CACHE_INDICE = Path(__file__).resolve().parents[2] / "data" / "cache" / "enso"
+
+
+def ler_indice_noaa(url: str, cache_dir: str | Path = CACHE_INDICE, cache_dias: int = 7,
+                    sessao=None) -> pd.DataFrame | None:
+    """Índice ENSO da NOAA/CPC (texto ``SEAS YR ANOM``) como ``mes_centro, ano, anom``.
+
+    Baixa ``url`` e guarda em cache por ``cache_dias``; sem rede, usa a última cópia; sem nenhuma, None.
+    O ano é o do mês central do trimestre (DJF 1950 = dez/1949–fev/1950, centro jan/1950), como na NOAA.
+    """
+    import os
+    import time
+
+    import requests
+
+    cache_dir = Path(cache_dir)
+    arquivo = cache_dir / Path(url).name
+    velho = not arquivo.exists() or (time.time() - arquivo.stat().st_mtime) > cache_dias * 86400
+    if velho:
+        try:
+            r = (sessao or requests).get(url, timeout=20, headers={"User-Agent": "towers-t7/0.1"})
+            r.raise_for_status()
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            tmp = arquivo.with_suffix(f".{os.getpid()}.tmp")
+            tmp.write_text(r.text, encoding="utf-8")
+            os.replace(tmp, arquivo)
+        except Exception as e:  # rede fora: segue com o cache, se houver
+            import logging
+            logging.getLogger(__name__).warning("ENSO: falha ao baixar %s (%s)", url, type(e).__name__)
+    if not arquivo.exists():
+        return None
+    linhas = []
+    for linha in arquivo.read_text(encoding="utf-8").splitlines():
+        partes = linha.split()
+        if len(partes) >= 3 and partes[0] in ESTACOES:
+            try:
+                linhas.append({"mes_centro": ESTACOES.index(partes[0]) + 1, "ano": int(partes[1]),
+                               "anom": float(partes[-1])})
+            except ValueError:
+                continue
+    return pd.DataFrame(linhas) if linhas else None
+
+
+def fase_do_indice(anom: float | None, limiar_el_nino: float = 0.5, limiar_la_nina: float = -0.5) -> str | None:
+    """Fase pelo critério da NOAA (média de 3 meses): El Niño, La Niña ou Neutro."""
+    if anom is None or np.isnan(anom):
+        return None
+    if anom >= limiar_el_nino:
+        return "El Niño"
+    if anom <= limiar_la_nina:
+        return "La Niña"
+    return "Neutro"

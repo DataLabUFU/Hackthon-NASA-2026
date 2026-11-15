@@ -80,18 +80,35 @@ A torre entrega **probabilidades**, não score. Se o ML quiser um score, ele con
 
 ## No recomendador (todo o Brasil)
 
-O app chama `avaliar_t7` (`torre.py`), que roda em paralelo com as outras torres e com o mesmo prazo
-(30 s). Diferenças em relação a `consulta.py`:
+O app chama `avaliar_t7` (`torre.py`), que roda em paralelo com as outras torres e com o mesmo prazo (30 s).
+Diferenças em relação a `consulta.py`:
 
 - **Dados:** em vez do CSV dos 20 pontos, usa a série diária do NASA POWER da célula do local (a mesma de
-  T1 e T2, `PRECTOTCORR` e `T2M`), então responde em qualquer ponto do país. Eventos, limiares
-  (`configs/extremos.yaml`) e funções (`eventos.py`, `referencia.indicadores_diarios`) são os mesmos.
-- **Anos:** todos os anos completos da série (2001 em diante), não só 2000–2021 (o corte é do ML).
-- **Fases (genéricas, até chegarem as janelas por cultura):** estabelecimento 0–20 dias (chuva e queda),
-  floração 40–65% do ciclo (queda) e colheita nos últimos 20 dias (chuva). Ciclo = meio de
-  `ciclo_min`–`ciclo_max` do catálogo (120 dias sem dado). Perenes e silvicultura: só o estabelecimento.
-- **Score:** `score_t7 = 1 − p_algum` (a conversão sugerida acima). As probabilidades, o IC e `n_anos`
-  seguem na saída e aparecem nos cartões e no painel de estatísticas.
+  T1 e T2: `PRECTOTCORR`, `T2M` e `T2M_MIN`), então responde em qualquer ponto do país. Anos: todos os
+  anos completos desde 2001 (o corte em 2021 é do ML).
+- **Eventos e fases por cultura** (`configs/extremos.yaml`, seção `culturas`, sem CSV novo):
+
+  | Cultura | Fase sensível e evento | Fonte |
+  |---|---|---|
+  | todas | estabelecimento (0–20 dias): chuva ≥ 50 mm em um dia | INMET (nível "perigo") |
+  | feijão | floração: mínima < 12 °C; colheita: chuva persistente | Embrapa Arroz e Feijão |
+  | milho | floração e enchimento: mínima < 12 °C | Embrapa Milho e Sorgo |
+  | arroz (sequeiro e irrigado) | emborrachamento e floração: mínima < 17 °C; colheita: chuva persistente | Embrapa (15 a 20 °C conforme a cultivar) |
+  | soja | maturação e colheita: chuva persistente (frio só retarda a floração; geada fica na T1) | Embrapa Soja |
+  | trigo | 20 dias antes da colheita: chuva persistente (geada na T1) | Embrapa Trigo |
+  | algodão | abertura dos capulhos: chuva persistente | Embrapa Algodão |
+  | demais | floração: queda brusca; colheita: chuva extrema (limiares gerais da T7) | T7 |
+
+  Chuva persistente = 5 dias seguidos com ≥ 5 mm. Não há limiar na literatura: foi escolhido como os da T7
+  (P entre 0,20 e 0,68 na colheita da soja em GO, MT, PR, BA e RS; 3 dias ≥ 1 mm dava 0,96–1,00). As frações
+  do ciclo de cada fase são aproximações da fenologia. Tudo `PROVISORIO`, a validar com o agro.
+  Perenes e silvicultura: só o estabelecimento.
+- **ENSO:** índice RONI da NOAA/CPC (oficial desde 01/02/2026), baixado na hora de `enso.url` com cache de
+  7 dias. Fase: El Niño se RONI ≥ +0,5 °C, La Niña se ≤ −0,5 °C. Cada ano recebe a fase do trimestre
+  centrado no mês do plantio; a fase atual é a do trimestre do plantio, se já publicado, senão a do último
+  trimestre (persistência). `p_algum = (n·p_enso + k·p_clim) / (n + k)` com `k = 10`. Sem o índice, fica a
+  climatologia (`p_algum_clim`).
+- **Score:** `score_t7 = 1 − p_algum`. Saída também com `p_chuva`, `p_frio`, IC e `n_anos_t7`.
 - **Peso no combinador** (`towers/combinador/pesos.py`): 0,10 no equilibrado, 0,20 em "estabilidade",
   0,10 em "saúde do solo" e 0,05 em "evitar seca" e "financiamento".
 

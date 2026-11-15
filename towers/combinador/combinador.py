@@ -68,8 +68,9 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
                                motivos_elegibilidade=pl.col("motivos")), on=chave, how="left")
     if t7 is not None:
         df = df.join(t7.select(*chave, s_t7=pl.col("score_t7"), p_extremo=pl.col("p_algum"),
-                               p_chuva_extrema=pl.col("p_chuva_extrema"), p_queda_brusca=pl.col("p_queda_brusca"),
-                               n_anos_t7=pl.col("n_anos_t7")), on=chave, how="left")
+                               p_extremo_chuva=pl.col("p_chuva"), p_extremo_frio=pl.col("p_frio"),
+                               n_anos_t7=pl.col("n_anos_t7"), enso_fase=pl.col("enso_fase"),
+                               eventos_t7=pl.col("eventos_t7")), on=chave, how="left")
     for nome, (extra, peso) in (extras or {}).items():
         k = [c for c in chave if c in extra.columns]
         df = df.join(extra.select(*k, pl.col(f"score_{nome}").alias(f"s_{nome}")), on=k, how="left")
