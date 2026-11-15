@@ -36,6 +36,7 @@ RAIOS = (0.02, 0.05, 0.1)
 # A API do SoilGrids pode demorar muito: prazo por requisição e orçamento total da busca (com vizinhos).
 # Estourou o orçamento → devolve None sem gravar cache (a próxima consulta tenta de novo).
 TIMEOUT_REQUISICAO_S = 10
+TIMEOUT_CLASSE_S = 15     # a classificação WRB é a consulta mais lenta da API (~11 s medidos)
 ORCAMENTO_TOTAL_S = 20
 # conversões: valor da API ÷ d_factor → unidade-alvo; ajustes adicionais para as unidades usadas aqui
 NOMES_TEXTURA = {"sand": "areia", "silt": "silte", "clay": "argila"}                      # %
@@ -79,7 +80,7 @@ def consultar_quimica(lat: float, lon: float, sessao: requests.Session | None = 
 
 def consultar_classe(lat: float, lon: float, sessao: requests.Session | None = None) -> dict | None:
     r = (sessao or requests).get(URL_CLASSE, params={"lon": lon, "lat": lat, "number_classes": 3},
-                                 headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_REQUISICAO_S)
+                                 headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT_CLASSE_S)
     r.raise_for_status()
     d = r.json()
     if not d.get("wrb_class_name") or d["wrb_class_name"] == "No information":

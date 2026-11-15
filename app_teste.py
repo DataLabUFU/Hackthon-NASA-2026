@@ -6,6 +6,7 @@ O modelo real (seis torres em towers/) é o padrão quando os dados existem; for
 
 Este arquivo é autossuficiente no visual: não depende de .streamlit/config.toml.
 """
+import logging
 from datetime import date
 from html import escape
 
@@ -13,6 +14,11 @@ import pandas as pd
 import streamlit as st
 
 import motor as mt
+
+# Logs de execução (torres fora da nota, falhas do SoilGrids, tempos) vão para o terminal, não para a tela.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+for ruidoso in ("urllib3", "requests"):
+    logging.getLogger(ruidoso).setLevel(logging.WARNING)
 
 try:                                    # usado só para marcar a página como pt-BR
     import streamlit.components.v1 as components

@@ -180,3 +180,21 @@ def test_listas_do_formulario():
     assert mt.CULTURAS_HISTORICO and mt.CULTURAS_DESEJADAS[0] == "Sem preferência" and mt.ESTADOS
     if mt.DADOS_REAIS:
         assert "Pousio" in mt.CULTURAS_HISTORICO and len(mt.ESTADOS) == 27
+
+
+def test_torres_fora_da_nota_vao_para_o_log_e_nao_para_a_tela(recomendador_falso, monkeypatch, caplog):
+    import logging
+    import towers.combinador as comb
+    original = comb.recomendar
+
+    def com_ausente(*a, **k):
+        r = original(*a, **k)
+        r.torres_ausentes = {"t3": "não respondeu em 30 s"}
+        return r
+
+    monkeypatch.setattr(comb, "recomendar", com_ausente)
+    e = mt.Entrada(penultimo="Milho", ultimo="Soja", uf="PR", cidade="Londrina", data_plantio=D)
+    with caplog.at_level(logging.WARNING, logger="motor"):
+        res = mt.motor_modelo(e, {})
+    assert not any("fora" in o for o in res.observacoes)
+    assert any("torre t3 fora da nota" in r.getMessage() for r in caplog.records)

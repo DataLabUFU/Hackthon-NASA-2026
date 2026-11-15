@@ -18,6 +18,7 @@ Classes derivadas:
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 from towers.data import soilgrids
 
@@ -59,11 +60,16 @@ def perfil_solo(lat: float, lon: float, problemas: tuple[str, ...] | list[str] =
     if invalidos := problemas - PROBLEMAS_VALIDOS:
         raise ValueError(f"problemas de solo desconhecidos: {sorted(invalidos)} (válidos: {sorted(PROBLEMAS_VALIDOS)})")
     analise = analise or {}
-    if fontes is None:
-        fontes = {}
-        for nome, f in (("textura", soilgrids.textura), ("quimica", soilgrids.quimica), ("classe", soilgrids.classe_wrb)):
+    fontes = dict(fontes or {})
+    faltam = {nome: f for nome, f in (("textura", soilgrids.textura), ("quimica", soilgrids.quimica),
+                                      ("classe", soilgrids.classe_wrb)) if nome not in fontes}
+    if faltam:
+        # as três consultas ao SoilGrids em paralelo: o tempo fica o da mais lenta, não a soma
+        with ThreadPoolExecutor(max_workers=len(faltam), thread_name_prefix="soilgrids") as ex:
+            futuros = {nome: ex.submit(f, lat, lon) for nome, f in faltam.items()}
+        for nome, fut in futuros.items():
             try:
-                fontes[nome] = f(lat, lon)
+                fontes[nome] = fut.result()
             except Exception as e:  # rede/API: segue com o que houver, sinalizado
                 log.warning("T3: SoilGrids (%s) indisponível: %s", nome, e)
                 fontes[nome] = None
