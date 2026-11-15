@@ -1,7 +1,7 @@
 """AgroData: interface Streamlit (convertida do HTML). A lógica fica em motor.py.
 
-Rodar:  pip install -r requirements.txt   e   streamlit run app.py
-Modelo real:  MOTOR_RECOMENDACAO=modelo streamlit run app.py
+Rodar:  pip install -r requirements.txt,  python scripts/preparar_dados.py  e  streamlit run app_teste.py
+O modelo real (seis torres em towers/) é o padrão quando os dados existem; force com MOTOR_RECOMENDACAO=mock|modelo.
 """
 from datetime import date
 from html import escape
@@ -97,11 +97,13 @@ def coletar_entrada():
         problemas = grade_checkbox("prob", mt.PROBLEMAS)
         st.markdown('<div class="secao-titulo">03. Objetivos para a próxima safra</div>', unsafe_allow_html=True)
         objetivos = grade_checkbox("obj", mt.OBJETIVOS)
+        tipos = st.multiselect("Tipos de cultura que você considera plantar (vazio = todos)", list(mt.TIPOS_CULTURA),
+                               format_func=lambda t: mt.TIPOS_CULTURA[t], placeholder="Todos os tipos")
         clicou = st.button("Analisar área e gerar recomendações", type="primary")
 
     entrada = mt.Entrada(penultimo=penultimo, ultimo=ultimo, uf=uf, cidade=cidade, data_plantio=data,
                          cultura_desejada=None if desejada == "Sem preferência" else desejada,
-                         problemas=problemas, objetivos=objetivos)
+                         problemas=problemas, objetivos=objetivos, tipos_cultura=tipos)
     return entrada, clicou
 
 
@@ -128,6 +130,8 @@ def html_resumo(e: mt.Entrada, resultado: mt.Resultado, demo: bool) -> str:
              f" | Cultura desejada: <strong>{escape(e.cultura_desejada or 'Sem preferência')}</strong>"
              f"<br><br>Problemas identificados: {escape(', '.join(e.problemas) or 'Nenhum informado')}"
              f"<br>Objetivos: {escape(', '.join(e.objetivos) or 'Nenhum informado')}")
+    if resultado.observacoes:
+        texto += "<br><br>" + "<br>".join(escape(o) for o in resultado.observacoes)
     if resultado.fonte == "mock":
         texto += ("<br><br><em>As recomendações exibidas são demonstrativas e ainda não são calculadas "
                   "automaticamente com base nos dados informados.</em>")
@@ -192,5 +196,8 @@ if st.button("Acessar estatísticas →", key="btn_stats"):
 if st.session_state.get("stats"):
     mostrar_estatisticas(st.session_state.entrada_res)
 
+aviso_rodape = ("A demonstração inicial é fictícia. As análises usam NASA POWER (clima e umidade do solo), "
+                "SoilGrids, ECOCROP/FAO e o ZARC/MAPA; confirme as condições de crédito com sua instituição financeira."
+                if mt.DADOS_REAIS else "Dados, recomendações e indicadores apresentados nesta versão são fictícios.")
 st.markdown('<div class="rodape">DataLab © 2026 | Plataforma de apoio à decisão do produtor.<br><br>'
-            'Dados, recomendações e indicadores apresentados nesta versão são fictícios.</div>', unsafe_allow_html=True)
+            f'{aviso_rodape}</div>', unsafe_allow_html=True)

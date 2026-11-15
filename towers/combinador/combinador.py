@@ -25,11 +25,12 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
              t4: pl.DataFrame | None = None, t5: pl.DataFrame | None = None, t6: pl.DataFrame | None = None,
              objetivo: str = "equilibrado", somente_financiaveis: bool | None = None,
              extras: dict[str, tuple[pl.DataFrame, float]] | None = None,
-             peso_evidencia: float = PESO_EVIDENCIA) -> pl.DataFrame:
+             peso_evidencia: float = PESO_EVIDENCIA, pesos: dict[str, float] | None = None) -> pl.DataFrame:
+    """``pesos`` (opcional) sobrescreve os pesos do objetivo (ex.: combinação de vários objetivos do front)."""
     if objetivo not in OBJETIVOS:
         raise ValueError(f"objetivo desconhecido: {objetivo!r} (válidos: {sorted(OBJETIVOS)})")
     cfg = OBJETIVOS[objetivo]
-    pesos = dict(cfg["pesos"])
+    pesos = dict(pesos or cfg["pesos"])
     conservador = cfg.get("conservador", False)
     if somente_financiaveis is None:
         somente_financiaveis = cfg.get("somente_financiaveis", False)
@@ -38,7 +39,7 @@ def combinar(t1: pl.DataFrame, t2: pl.DataFrame | None = None, t3: pl.DataFrame 
     df = t1.select(
         *chave, "nome_pt", "uso", "modo", "colheita", "obrigatoria", "escala_cultivo", "gate_t1", "fator_limitante",
         "ciclo_dias", "alerta_foto_mensagem", "alerta_ciclo_extremo",
-        *[c for c in ("fonte_parametros", "tipo_cultura") if c in t1.columns],
+        *[c for c in ("fonte_parametros", "tipo_cultura", "prob_apta") if c in t1.columns],
         s_t1=pl.col("apt_p20") if conservador else pl.col("score_t1"),
     )
     if t2 is not None:

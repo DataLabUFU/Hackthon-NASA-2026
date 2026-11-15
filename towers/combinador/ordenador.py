@@ -46,11 +46,14 @@ def ordenar(comb: pl.DataFrame) -> pl.DataFrame:
     return _explicar(r)
 
 
-def setores(ranking: pl.DataFrame, top_n: int = 3) -> dict[str, pl.DataFrame]:
+def setores(ranking: pl.DataFrame, top_n: int = 3, universo_piores: pl.Expr | None = None) -> dict[str, pl.DataFrame]:
+    """``universo_piores``: restringe os piores a culturas relevantes (ex.: ``pl.col("obrigatoria")``), para não
+    listar espécies exóticas que o produtor nunca consideraria."""
     viaveis = ranking.filter(~pl.col("eliminada"))
     melhores = viaveis.head(top_n)
     usados = set(melhores["nome_pt"])
-    piores = ranking.filter(~pl.col("nome_pt").is_in(list(usados))).tail(top_n).reverse()
+    base_piores = ranking if universo_piores is None else ranking.filter(universo_piores)
+    piores = base_piores.filter(~pl.col("nome_pt").is_in(list(usados))).tail(top_n).reverse()
     usados |= set(piores["nome_pt"])
     meio = viaveis.filter(~pl.col("nome_pt").is_in(list(usados)))
     if meio.height:

@@ -46,6 +46,7 @@ class Recomendacao:
     entrada: dict
     tempos_s: dict[str, float] = field(default_factory=dict)
     candidatos: pl.DataFrame | None = None   # todas as (cultura × data) combinadas, antes de escolher a melhor data
+    torres: dict[str, pl.DataFrame] = field(default_factory=dict)   # saída bruta de cada torre (detalhes na interface)
 
 
 def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str | None = None,
@@ -54,7 +55,8 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
                imovel: dict | None = None, objetivo: str = "equilibrado", irrigado: bool = False,
                somente_financiaveis: bool | None = None, incluir_silvicultura: bool = True,
                top_n: int = TOP_N_PADRAO, geocodigo: str | None = None, tipos_cultura: list[str] | None = None,
-               peso_evidencia: float | None = None,
+               peso_evidencia: float | None = None, pesos: dict[str, float] | None = None,
+               universo_piores: pl.Expr | None = None,
                extras: dict[str, tuple[pl.DataFrame, float]] | None = None) -> Recomendacao:
     """``tipos_cultura``: o que o produtor considera plantar (chaves de ``TIPOS_CULTURA``); None = todos.
     A cultura desejada é sempre avaliada, mesmo fora dos tipos escolhidos."""
@@ -86,12 +88,13 @@ def recomendar(lat: float, lon: float, data_plantio: date, cultura_desejada: str
 
     kw = {} if peso_evidencia is None else {"peso_evidencia": peso_evidencia}
     comb = combinar(t1, t2, t3, t4, t5, t6, objetivo=objetivo, somente_financiaveis=somente_financiaveis,
-                    extras=extras, **kw)
+                    extras=extras, pesos=pesos, **kw)
     ranking = ordenar(comb)
-    sets = setores(ranking, top_n=top_n)
+    sets = setores(ranking, top_n=top_n, universo_piores=universo_piores)
     desejada = localizar(ranking, desejada_nome, sets) if desejada_nome else None
     entrada = dict(lat=lat, lon=lon, geocodigo=geocodigo, data_plantio=data_plantio, cultura_desejada=desejada_nome,
                    ultimo=ultimo, penultimo=penultimo, problemas_solo=list(problemas_solo), objetivo=objetivo,
                    irrigado=irrigado, top_n=top_n, tipos_cultura=tipos_cultura)
     log.info("Recomendação: %d culturas ranqueadas; tempos %s", ranking.height, tempos)
-    return Recomendacao(ranking, sets, desejada, objetivo, entrada, tempos, comb)
+    return Recomendacao(ranking, sets, desejada, objetivo, entrada, tempos, comb,
+                        {"t1": t1, "t2": t2, "t3": t3, "t4": t4, "t5": t5, "t6": t6})
