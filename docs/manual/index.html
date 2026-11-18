@@ -1,0 +1,1432 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recomendador RotaSafra — Manual Técnico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Barlow+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+
+<!-- Símbolos comuns a todos os desenhos: pontas de seta -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <marker id="ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#eaf4ff"/>
+        </marker>
+        <marker id="ponta-ciano" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#8fe3ff"/>
+        </marker>
+        <marker id="traco-cota" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+            <path d="M2 8 L8 2" stroke="#eaf4ff" stroke-width="1.4"/>
+        </marker>
+    </defs>
+</svg>
+
+<header class="barra">
+    <button class="botao so-movel" id="abrir-indice" aria-label="Abrir o índice de pranchas">☰</button>
+    <h1>RotaSafra <small>· manual técnico do recomendador</small></h1>
+    <span class="espaco"></span>
+    <span class="status" id="status">notas neste navegador</span>
+    <button class="botao caneta" id="abrir-caderno">Caderno de notas</button>
+</header>
+
+<nav class="indice" id="indice" aria-label="Pranchas">
+    <h2>Índice de pranchas</h2>
+    <ol id="lista-pranchas"></ol>
+    <div class="ferramentas">
+        <button class="botao pequeno caneta" id="exportar-notas">Exportar notas (.md)</button>
+        <button class="botao pequeno" id="backup-notas">Backup das notas (.json)</button>
+        <button class="botao pequeno" id="importar-notas">Importar backup</button>
+        <input type="file" id="arquivo-backup" accept="application/json,.json">
+    </div>
+</nav>
+
+<main id="manual">
+
+<!-- ===================================================================== 00 -->
+<section class="prancha" id="p00" data-titulo="Plano geral do modelo">
+    <header class="prancha-cabecalho">
+        <span class="numero">00</span>
+        <h2>Plano geral do modelo<small>O que o recomendador faz: gerar candidatos, pontuar em sete torres, combinar e ordenar</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>O recomendador responde a uma pergunta do produtor: <strong>o que plantar, e quando</strong>, num ponto qualquer do Brasil. Ele não é um modelo preditivo treinado. É um mecanismo de <strong>simulação e busca</strong>: monta todos os cenários candidatos (cultura × data de plantio × ciclo), avalia cada um em sete <strong>torres</strong> independentes, combina as notas conforme o objetivo do produtor e devolve as culturas em três grupos: melhores, intermediárias e piores.</p>
+        <p>A entrada é o que o produtor sabe: o município, a data pretendida, as duas últimas safras, os problemas da área, os objetivos e, se quiser, a cultura que tem em mente. O resto vem de dados públicos: clima diário da NASA POWER, solo do SoilGrids, zoneamento do MAPA (ZARC) e os requisitos de cada espécie no FAO ECOCROP.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 520" role="img" aria-label="Plano geral: entrada, candidatos, sete torres, combinador, ordenador e saída">
+                <rect x="20" y="40" width="190" height="110" class="caixa"/>
+                <text x="115" y="66" text-anchor="middle">Entrada</text>
+                <text x="115" y="88" text-anchor="middle" class="t-pequeno">UF e município</text>
+                <text x="115" y="103" text-anchor="middle" class="t-pequeno">data de plantio</text>
+                <text x="115" y="118" text-anchor="middle" class="t-pequeno">duas últimas safras</text>
+                <text x="115" y="133" text-anchor="middle" class="t-pequeno">problemas e objetivos</text>
+                <line class="seta" x1="210" y1="95" x2="238" y2="95"/>
+
+                <rect x="240" y="40" width="210" height="110" class="caixa-dupla"/>
+                <text x="345" y="66" text-anchor="middle">Candidatos</text>
+                <text x="345" y="88" text-anchor="middle" class="t-pequeno">cultura × data × ciclo</text>
+                <text x="345" y="103" text-anchor="middle" class="t-pequeno">7 datas: −30 a +30 dias</text>
+                <text x="345" y="118" text-anchor="middle" class="t-pequeno">ciclos da grade ECOCROP</text>
+                <text x="345" y="133" text-anchor="middle" class="t-pequeno">prancha 04</text>
+
+                <rect x="490" y="30" width="490" height="130" class="caixa-externa"/>
+                <text x="735" y="52" text-anchor="middle" class="t-titulo">Fontes de dados</text>
+                <text x="505" y="78" class="t-pequeno">NASA POWER · clima diário</text>
+                <text x="505" y="96" class="t-pequeno">GPM IMERG · chuva</text>
+                <text x="505" y="114" class="t-pequeno">SoilGrids 2.0 · solo</text>
+                <text x="505" y="132" class="t-pequeno">ZARC (MAPA) · zoneamento</text>
+                <text x="750" y="78" class="t-pequeno">FAO ECOCROP · requisitos</text>
+                <text x="750" y="96" class="t-pequeno">FAO-56/33 · Kc, p, Ky</text>
+                <text x="750" y="114" class="t-pequeno">IBGE · municípios</text>
+                <text x="750" y="132" class="t-pequeno">NOAA RONI · El Niño</text>
+
+                <!-- barramento até as torres -->
+                <line class="linha" x1="345" y1="150" x2="345" y2="178"/>
+                <line class="linha" x1="84" y1="178" x2="912" y2="178"/>
+                <path class="seta-tracejada" d="M735 160 V176"/>
+                <line class="seta" x1="84" y1="178" x2="84" y2="198"/>
+                <line class="seta" x1="222" y1="178" x2="222" y2="198"/>
+                <line class="seta" x1="360" y1="178" x2="360" y2="198"/>
+                <line class="seta" x1="498" y1="178" x2="498" y2="198"/>
+                <line class="seta" x1="636" y1="178" x2="636" y2="198"/>
+                <line class="seta" x1="774" y1="178" x2="774" y2="198"/>
+                <line class="seta" x1="912" y1="178" x2="912" y2="198"/>
+
+                <!-- torres -->
+                <rect x="20" y="200" width="128" height="90" class="caixa-ciano"/>
+                <text x="30" y="217" class="t-pequeno">T1 · p05</text>
+                <text x="84" y="240" text-anchor="middle">Clima</text>
+                <text x="84" y="260" text-anchor="middle" class="t-pequeno">ECOCROP × POWER</text>
+                <text x="84" y="276" text-anchor="middle" class="t-pequeno">aptidão por ano</text>
+                <rect x="158" y="200" width="128" height="90" class="caixa-ciano"/>
+                <text x="168" y="217" class="t-pequeno">T2 · p06</text>
+                <text x="222" y="240" text-anchor="middle">Água</text>
+                <text x="222" y="260" text-anchor="middle" class="t-pequeno">balanço FAO-56</text>
+                <text x="222" y="276" text-anchor="middle" class="t-pequeno">1 − queda média</text>
+                <rect x="296" y="200" width="128" height="90" class="caixa"/>
+                <text x="306" y="217" class="t-pequeno">T3 · p07</text>
+                <text x="360" y="240" text-anchor="middle">Solo</text>
+                <text x="360" y="260" text-anchor="middle" class="t-pequeno">solo do local</text>
+                <text x="360" y="276" text-anchor="middle" class="t-pequeno">lei do mínimo</text>
+                <rect x="434" y="200" width="128" height="90" class="caixa"/>
+                <text x="444" y="217" class="t-pequeno">T4 · p08</text>
+                <text x="498" y="240" text-anchor="middle">ZARC</text>
+                <text x="498" y="260" text-anchor="middle" class="t-pequeno">Tábua de Risco</text>
+                <text x="498" y="276" text-anchor="middle" class="t-pequeno">risco → nota</text>
+                <rect x="572" y="200" width="128" height="90" class="caixa"/>
+                <text x="582" y="217" class="t-pequeno">T5 · p09</text>
+                <text x="636" y="240" text-anchor="middle">Rotação</text>
+                <text x="636" y="260" text-anchor="middle" class="t-pequeno">2 últimas safras</text>
+                <text x="636" y="276" text-anchor="middle" class="t-pequeno">0,75 ± regras</text>
+                <rect x="710" y="200" width="128" height="90" class="caixa-ciano"/>
+                <text x="720" y="217" class="t-pequeno">T7 · p10</text>
+                <text x="774" y="240" text-anchor="middle">Extremos</text>
+                <text x="774" y="260" text-anchor="middle" class="t-pequeno">chuva forte, frio</text>
+                <text x="774" y="276" text-anchor="middle" class="t-pequeno">1 − P(algum)</text>
+                <rect x="848" y="200" width="128" height="90" class="caixa-externa"/>
+                <text x="858" y="217" class="t-pequeno">T6 · p08</text>
+                <text x="912" y="240" text-anchor="middle">Crédito</text>
+                <text x="912" y="260" text-anchor="middle" class="t-pequeno">ZARC + imóvel</text>
+                <text x="912" y="276" text-anchor="middle" class="t-pequeno">filtro e selo</text>
+
+                <!-- junção das notas -->
+                <line class="linha" x1="84" y1="290" x2="84" y2="318"/>
+                <line class="linha" x1="222" y1="290" x2="222" y2="318"/>
+                <line class="linha" x1="360" y1="290" x2="360" y2="318"/>
+                <line class="linha" x1="498" y1="290" x2="498" y2="318"/>
+                <line class="linha" x1="636" y1="290" x2="636" y2="318"/>
+                <line class="linha" x1="774" y1="290" x2="774" y2="318"/>
+                <line class="linha" x1="84" y1="318" x2="774" y2="318"/>
+                <line class="seta" x1="350" y1="318" x2="350" y2="358"/>
+                <path class="seta-tracejada" d="M912 290 V334 H470 V358"/>
+                <text x="560" y="350" class="t-pequeno">filtro e selo (fora da média)</text>
+
+                <rect x="200" y="360" width="300" height="90" class="caixa-dupla"/>
+                <text x="350" y="384" text-anchor="middle">Combinador · p11</text>
+                <text x="350" y="404" text-anchor="middle" class="t-pequeno">média geométrica ponderada</text>
+                <text x="350" y="420" text-anchor="middle" class="t-pequeno">pesos pelo objetivo</text>
+                <text x="350" y="436" text-anchor="middle" class="t-pequeno">× evidência × aderência</text>
+                <line class="seta" x1="500" y1="405" x2="558" y2="405"/>
+                <rect x="560" y="360" width="190" height="90" class="caixa"/>
+                <text x="655" y="384" text-anchor="middle">Ordenador · p12</text>
+                <text x="655" y="404" text-anchor="middle" class="t-pequeno">melhor data por cultura</text>
+                <text x="655" y="420" text-anchor="middle" class="t-pequeno">ranking</text>
+                <text x="655" y="436" text-anchor="middle" class="t-pequeno">três setores</text>
+                <line class="seta" x1="750" y1="405" x2="788" y2="405"/>
+                <rect x="790" y="360" width="190" height="90" class="caixa-dupla"/>
+                <text x="885" y="384" text-anchor="middle">Saída</text>
+                <text x="885" y="404" text-anchor="middle" class="t-pequeno">3 melhores (verde)</text>
+                <text x="885" y="420" text-anchor="middle" class="t-pequeno">3 intermediárias</text>
+                <text x="885" y="436" text-anchor="middle" class="t-pequeno">3 piores (vermelho)</text>
+
+                <line class="linha-fina" x1="20" y1="470" x2="980" y2="470"/>
+                <rect x="20" y="484" width="30" height="18" class="caixa-ciano"/>
+                <text x="60" y="498" class="t-pequeno">usa a série da NASA POWER</text>
+                <rect x="290" y="484" width="30" height="18" class="caixa"/>
+                <text x="330" y="498" class="t-pequeno">regras e tabelas</text>
+                <rect x="490" y="484" width="30" height="18" class="caixa-externa"/>
+                <text x="530" y="498" class="t-pequeno">não entra na média</text>
+                <text x="700" y="499" class="t-caneta">nenhuma torre chama outra</text>
+            </svg>
+            <figcaption>Fig. 00.1 — Plano geral. Cada torre pontua todos os candidatos sozinha; o combinador junta as notas e o ordenador escolhe a melhor data de cada cultura.</figcaption>
+        </figure>
+
+        <h3>Por que simulação e busca, e não um modelo treinado</h3>
+        <ul>
+            <li><strong>O risco do ZARC é climatológico.</strong> Entre safras consecutivas, 96% a 99% dos decêndios da soja têm o mesmo valor na Tábua de Risco. Um modelo treinado para prever o ZARC repetiria a tabela e não reagiria ao clima do ano.</li>
+            <li><strong>O objetivo muda de produtor para produtor.</strong> Um quer evitar seca, outro quer recuperar o solo, outro precisa de crédito. Um modelo treinado fixa um único alvo; aqui o objetivo só muda os pesos do combinador.</li>
+            <li><strong>Não existe rótulo de "boa recomendação".</strong> Sem um resultado real observado, o combinador começa como regra explícita e explicável. O plano prevê trocá-lo por um modelo aprendido com os sinistros do seguro rural (PSR/SISSER), quando houver esse rótulo.</li>
+        </ul>
+
+        <h3>Como usar este manual</h3>
+        <ul>
+            <li><strong>Pranchas:</strong> cada prancha explica uma parte do recomendador, com desenho, arquivos envolvidos e o porquê das decisões. A ordem segue o caminho de uma recomendação: dados, candidatos, as sete torres, o combinador, a ordenação e a interface.</li>
+            <li><strong>Notas:</strong> selecione um trecho e clique em <em>Anotar</em>. A nota fica presa ao parágrafo, como uma marca de caneta. Cada prancha também tem notas gerais no fim. As notas ficam no <strong>navegador</strong> (localStorage): use o backup <code>.json</code> para levá-las a outra máquina.</li>
+            <li><strong>Arquivos:</strong> as fichas no fim de cada prancha abrem o código citado. Aberto do disco, o link vai para o arquivo do repositório; publicado, vai para o GitHub.</li>
+            <li><strong>Caderno:</strong> reúne todas as notas por prancha e exporta tudo em Markdown.</li>
+        </ul>
+        <div class="dica">O manual descreve o código da branch <code>feat/recomendador-v-0</code> em novembro de 2026. Pesos, limiares e regras marcados como provisórios no código também são provisórios aqui.</div>
+        <div class="arquivos" data-arquivos="docs/PLANO_RECOMENDADOR.md README.md towers/combinador/recomendador.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Recomendador RotaSafra · Manual técnico</div>
+        <div><b>Prancha</b>00 / 15</div><div><b>Assunto</b>Plano geral</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 01 -->
+<section class="prancha" id="p01" data-titulo="Caminho de uma recomendação">
+    <header class="prancha-cabecalho">
+        <span class="numero">01</span>
+        <h2>Caminho de uma recomendação<small>Do formulário do Streamlit às torres, e de volta aos cartões</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>A interface (<code>app_teste.py</code>, o app RotaSafra em Streamlit) não conhece as torres. Ela monta uma <code>Entrada</code> e chama <code>motor.gerar_recomendacoes</code>. O <code>motor.py</code> é o único arquivo que liga a interface ao modelo: traduz o formulário em parâmetros, chama <code>towers.combinador.recomendar</code> e transforma o resultado em cartões com justificativas.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 410" role="img" aria-label="Diagrama de sequência entre a interface, o motor, o recomendador e as torres">
+                <text x="100" y="30" text-anchor="middle" class="t-titulo">app_teste.py</text>
+                <text x="330" y="30" text-anchor="middle" class="t-titulo">motor.py</text>
+                <text x="580" y="30" text-anchor="middle" class="t-titulo">recomendar()</text>
+                <text x="850" y="30" text-anchor="middle" class="t-titulo">torres e dados</text>
+                <line class="eixo" x1="100" y1="42" x2="100" y2="380"/>
+                <line class="eixo" x1="330" y1="42" x2="330" y2="380"/>
+                <line class="eixo" x1="580" y1="42" x2="580" y2="380"/>
+                <line class="eixo" x1="850" y1="42" x2="850" y2="380"/>
+
+                <path class="seta" d="M100 70 H318"/>
+                <text x="110" y="62" class="t-pequeno">Entrada (formulário)</text>
+                <rect x="320" y="76" width="20" height="74" class="caixa"/>
+                <text x="350" y="96" class="t-pequeno">objetivos → pesos das torres</text>
+                <text x="350" y="112" class="t-pequeno">problemas → solo e benefícios</text>
+                <text x="350" y="128" class="t-pequeno">município → lat, lon (IBGE)</text>
+                <path class="seta" d="M340 165 H568"/>
+                <text x="350" y="158" class="t-pequeno">recomendar(lat, lon, data…)</text>
+                <rect x="570" y="172" width="20" height="140" class="caixa-ciano"/>
+                <path class="seta" d="M590 190 H848"/>
+                <text x="600" y="184" class="t-pequeno">clima e solo: 1 vez, compartilhados</text>
+                <path class="seta" d="M590 220 H848"/>
+                <text x="600" y="214" class="t-pequeno">T1…T7 em paralelo · 30 s cada</text>
+                <path class="seta-tracejada" d="M848 255 H592"/>
+                <text x="600" y="249" class="t-pequeno">DataFrames (ou ausente)</text>
+                <text x="600" y="290" class="t-pequeno">combinar → ordenar → setores</text>
+                <path class="seta-tracejada" d="M570 325 H342"/>
+                <text x="350" y="319" class="t-pequeno">Recomendacao (ranking, setores)</text>
+                <path class="seta-tracejada" d="M320 360 H102"/>
+                <text x="110" y="354" class="t-pequeno">Resultado: cartões e notas</text>
+                <text x="110" y="400" class="t-caneta">a torre que falha ou atrasa fica fora da nota; as outras seguem</text>
+            </svg>
+            <figcaption>Fig. 01.1 — Sequência de uma recomendação. O motor traduz; o recomendador orquestra; as torres pontuam.</figcaption>
+        </figure>
+
+        <h3>O que acontece dentro de <code>recomendar()</code></h3>
+        <ol>
+            <li><strong>Catálogo.</strong> Carrega as culturas exibíveis (prancha 04), filtra pelos tipos que o produtor marcou e acrescenta a cultura desejada, que é sempre avaliada.</li>
+            <li><strong>Município e datas.</strong> Usa o geocódigo do IBGE (ou a sede mais próxima da coordenada) e gera as 7 datas candidatas.</li>
+            <li><strong>Dados compartilhados.</strong> Dispara, num <code>ThreadPoolExecutor</code> de 8 threads, a série da NASA POWER (usada por T1, T2 e T7) e o solo do local (classe AD do ZARC, usada por T2, T4 e T6).</li>
+            <li><strong>Torres em paralelo.</strong> Cada torre tem um prazo de 30 s (<code>TIMEOUT_TORRE_S</code>), contado a partir do início. A que não responde ou dá erro entra em <code>torres_ausentes</code> e fica neutra no combinador.</li>
+            <li><strong>Combinação e ordenação.</strong> Calcula a aderência aos benefícios pedidos, chama <code>combinar</code>, <code>ordenar</code> e <code>setores</code>, e localiza a cultura desejada no ranking.</li>
+        </ol>
+        <p>O retorno é uma <code>Recomendacao</code>: o ranking (uma linha por cultura), os três setores, a posição da desejada, a entrada, o tempo de cada torre, os candidatos combinados e a saída bruta de cada torre, que o painel de estatísticas usa.</p>
+
+        <h3>Peças do sistema</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Peça</th><th>Papel</th><th>Arquivos</th></tr>
+            <tr><td>Interface</td><td>Formulário, cartões verde/amarelo/vermelho e painel "Acessar estatísticas". Guarda a resposta em cache por 12 h e na URL, para sobreviver ao recarregar.</td><td><code>app_teste.py</code>, <code>painel_estatisticas.py</code></td></tr>
+            <tr><td>Motor</td><td>Traduz a <code>Entrada</code>, chama o recomendador e escreve as justificativas. Também tem um <code>motor_mock</code> para demonstração sem dados.</td><td><code>motor.py</code></td></tr>
+            <tr><td>Recomendador</td><td>Orquestra as torres, com prazo e tolerância a falhas.</td><td><code>towers/combinador/recomendador.py</code></td></tr>
+            <tr><td>Torres T1–T7</td><td>Uma nota (ou probabilidade) por candidato, com as métricas que a explicam.</td><td><code>towers/t1_aptidao/</code> … <code>towers/t7_extremos/</code></td></tr>
+            <tr><td>Dados</td><td>Clientes das fontes externas, com cache local e no NeonDB.</td><td><code>towers/data/</code></td></tr>
+            <tr><td>Painel de estatísticas</td><td>Clima mensal, água no solo hoje, solo do local, calendário do ZARC e notas por critério, sem recalcular as torres.</td><td><code>estatisticas.py</code></td></tr>
+        </table>
+        </div>
+        <div class="arquivos" data-arquivos="app_teste.py motor.py towers/combinador/recomendador.py estatisticas.py painel_estatisticas.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Caminho de uma recomendação</div>
+        <div><b>Prancha</b>01 / 15</div><div><b>Assunto</b>Orquestração</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 02 -->
+<section class="prancha" id="p02" data-titulo="Estrutura de pastas">
+    <header class="prancha-cabecalho">
+        <span class="numero">02</span>
+        <h2>Estrutura de pastas<small>O mapa do terreno: o modelo mora em <code>towers/</code></small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>Tudo que pontua fica em <code>towers/</code>: uma pasta por torre, sempre com um <code>torre.py</code> que exporta <code>avaliar_tN</code>, mais o combinador, os clientes de dados e funções físicas comuns. A interface e o motor ficam na raiz. Nenhuma torre importa outra torre: as poucas peças compartilhadas (janelas de datas, famílias botânicas) vêm de funções utilitárias.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 580" role="img" aria-label="Árvore de pastas do repositório com a função de cada uma">
+                <text x="30" y="34" class="t-titulo">Hackthon-NASA-2026/</text>
+                <line class="linha" x1="40" y1="44" x2="40" y2="548"/>
+                <line class="linha" x1="40" y1="70" x2="70" y2="70"/><text x="78" y="75">app_teste.py</text><text x="440" y="75" class="t-pequeno">interface Streamlit: formulário, cartões e painel</text>
+                <line class="linha" x1="40" y1="104" x2="70" y2="104"/><text x="78" y="109">motor.py</text><text x="440" y="109" class="t-pequeno">Entrada → recomendar() → Resultado (cartões e justificativas)</text>
+                <line class="linha" x1="40" y1="138" x2="70" y2="138"/><text x="78" y="143">estatisticas.py, painel_…</text><text x="440" y="143" class="t-pequeno">dados e gráficos do painel "Acessar estatísticas"</text>
+                <line class="linha" x1="40" y1="172" x2="70" y2="172"/><text x="78" y="177">towers/</text><text x="440" y="177" class="t-pequeno">o modelo — detalhado ao lado ↓</text>
+                <line class="linha" x1="110" y1="182" x2="110" y2="282"/>
+                <line class="linha-fina" x1="110" y1="204" x2="130" y2="204"/><text x="136" y="208" class="t-ciano">combinador/</text><text x="440" y="208" class="t-pequeno">recomendador, combinador, pesos, preferências, ordenador</text>
+                <line class="linha-fina" x1="110" y1="230" x2="130" y2="230"/><text x="136" y="234" class="t-ciano">t1_aptidao/ … t7_extremos/</text><text x="440" y="234" class="t-pequeno">uma pasta por torre; torre.py exporta avaliar_tN</text>
+                <line class="linha-fina" x1="110" y1="256" x2="130" y2="256"/><text x="136" y="260" class="t-ciano">data/</text><text x="440" y="260" class="t-pequeno">clientes e caches: POWER, SoilGrids, ZARC, ECOCROP, FAO-56, IBGE, Neon</text>
+                <line class="linha-fina" x1="110" y1="282" x2="130" y2="282"/><text x="136" y="286" class="t-ciano">utils/</text><text x="440" y="286" class="t-pequeno">astronomia (comprimento do dia, Ra) e ET0</text>
+                <line class="linha" x1="40" y1="314" x2="70" y2="314"/><text x="78" y="319">configs/extremos.yaml</text><text x="440" y="319" class="t-pequeno">limiares, ENSO e fases por cultura da T7</text>
+                <line class="linha" x1="40" y1="348" x2="70" y2="348"/><text x="78" y="353">db/schema.sql</text><text x="440" y="353" class="t-pequeno">tabelas do NeonDB (dados e caches)</text>
+                <line class="linha" x1="40" y1="382" x2="70" y2="382"/><text x="78" y="387">scripts/</text><text x="440" y="387" class="t-pequeno">preparar_dados · preparar_soilgrids · carregar_neon · t7_*</text>
+                <line class="linha" x1="40" y1="416" x2="70" y2="416"/><text x="78" y="421">tests/</text><text x="440" y="421" class="t-pequeno">pytest: um arquivo por torre e por cliente de dados</text>
+                <line class="linha" x1="40" y1="450" x2="70" y2="450"/><text x="78" y="455">docs/</text><text x="440" y="455" class="t-caneta">o plano (PLANO_RECOMENDADOR.md) e este manual</text>
+                <line class="linha" x1="40" y1="484" x2="70" y2="484"/><text x="78" y="489">data/ <tspan class="t-pequeno">(fora do git)</tspan></text><text x="440" y="489" class="t-pequeno">raw/ (ECOCROP, IBGE, ZARC, PTF, grade do solo) e cache/ (POWER, SoilGrids, GBIF)</text>
+                <line class="linha" x1="40" y1="518" x2="70" y2="518"/><text x="78" y="523">.streamlit/</text><text x="440" y="523" class="t-pequeno">tema do app; secrets.toml (URL do Neon) fica fora do git</text>
+                <line class="linha" x1="40" y1="548" x2="70" y2="548"/><text x="78" y="553" class="t-pequeno">app.py · scoring.py · dados.py</text><text x="440" y="553" class="t-pequeno">protótipo anterior (7 critérios, pesos do agrônomo): não usado pelo recomendador</text>
+                <text x="760" y="24" class="t-caneta">towers/ = o modelo</text>
+                <text x="760" y="44" class="t-caneta">raiz = interface e motor</text>
+            </svg>
+            <figcaption>Fig. 02.1 — Árvore de pastas. Em ciano, as subpastas do modelo; em letra de mão, a divisão principal.</figcaption>
+        </figure>
+        <div class="dica"><code>page.html</code> e <code>estatisticas.html</code> são maquetes estáticas da interface (marca AgroData). <code>api_localizacao.py</code> é um teste avulso da API de localidades do IBGE. Nenhum deles entra no caminho da recomendação.</div>
+        <div class="arquivos" data-arquivos="README.md requirements.txt .gitignore pytest.ini"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Estrutura de pastas</div>
+        <div><b>Prancha</b>02 / 15</div><div><b>Assunto</b>Organização</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 03 -->
+<section class="prancha" id="p03" data-titulo="Fontes de dados e caches">
+    <header class="prancha-cabecalho">
+        <span class="numero">03</span>
+        <h2>Fontes de dados e caches<small>De onde vem cada número, onde ele fica guardado e o que fazer quando a fonte falha</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>Cada fonte externa tem um cliente em <code>towers/data/</code>. Os arquivos estáticos (ECOCROP, municípios, PTF da Embrapa, Tábua do ZARC) são baixados uma vez por <code>scripts/preparar_dados.py</code>. O clima e o solo são buscados <strong>sob demanda</strong>, por local, e ficam em cache. No Streamlit Cloud, onde o disco é apagado a cada reinício, o NeonDB faz o papel de cache compartilhado.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 480" role="img" aria-label="Fontes externas, clientes em towers/data e caches de cada uma">
+                <text x="155" y="32" text-anchor="middle" class="t-titulo">Fonte</text>
+                <text x="495" y="32" text-anchor="middle" class="t-titulo">Cliente (towers/data)</text>
+                <text x="840" y="32" text-anchor="middle" class="t-titulo">Cache</text>
+
+                <rect x="20" y="50" width="270" height="56" class="caixa-externa"/><text x="34" y="72">NASA POWER</text><text x="34" y="92" class="t-pequeno">diário · célula 0,5° × 0,625°</text>
+                <line class="seta" x1="290" y1="78" x2="348" y2="78"/>
+                <rect x="350" y="50" width="290" height="56" class="caixa-ciano"/><text x="364" y="72">power.py · clima_diario()</text><text x="364" y="92" class="t-pequeno">chuva IMERG, horário UTC, desde 2001</text>
+                <line class="seta" x1="640" y1="78" x2="698" y2="78"/>
+                <rect x="700" y="50" width="280" height="56" class="caixa"/><text x="714" y="72">data/cache/power/</text><text x="714" y="92" class="t-pequeno">parquet por célula · tabela no Neon</text>
+
+                <rect x="20" y="120" width="270" height="56" class="caixa-externa"/><text x="34" y="142">SoilGrids 2.0 (ISRIC)</text><text x="34" y="162" class="t-pequeno">API REST e mapas de 1 km</text>
+                <line class="seta" x1="290" y1="148" x2="348" y2="148"/>
+                <rect x="350" y="120" width="290" height="56" class="caixa-ciano"/><text x="364" y="142">soilgrids.py · _grade.py</text><text x="364" y="162" class="t-pequeno">grade 0,01°; API só fora dela</text>
+                <line class="seta" x1="640" y1="148" x2="698" y2="148"/>
+                <rect x="700" y="120" width="280" height="56" class="caixa"/><text x="714" y="142">grade_brasil.parquet</text><text x="714" y="162" class="t-pequeno">blocos de 1° · Neon · cache da API</text>
+
+                <rect x="20" y="190" width="270" height="56" class="caixa-externa"/><text x="34" y="212">Tábua de Risco ZARC</text><text x="34" y="232" class="t-pequeno">MAPA · dados abertos (CC-BY)</text>
+                <line class="seta" x1="290" y1="218" x2="348" y2="218"/>
+                <rect x="350" y="190" width="290" height="56" class="caixa-ciano"/><text x="364" y="212">zarc.py · tabua()</text><text x="364" y="232" class="t-pequeno">safra vigente de cada cultura</text>
+                <line class="seta" x1="640" y1="218" x2="698" y2="218"/>
+                <rect x="700" y="190" width="280" height="56" class="caixa"/><text x="714" y="212">raw/zarc/…parquet</text><text x="714" y="232" class="t-pequeno">Neon: só o município pedido</text>
+
+                <rect x="20" y="260" width="270" height="56" class="caixa-externa"/><text x="34" y="282">FAO ECOCROP + GBIF</text><text x="34" y="302" class="t-pequeno">OpenCLIM · Flora e Funga do Brasil</text>
+                <line class="seta" x1="290" y1="288" x2="348" y2="288"/>
+                <rect x="350" y="260" width="290" height="56" class="caixa-ciano"/><text x="364" y="282">culturas.py · ecocrop.py</text><text x="364" y="302" class="t-pequeno">+ listas curadas (obrigatórias, extra)</text>
+                <line class="seta" x1="640" y1="288" x2="698" y2="288"/>
+                <rect x="700" y="260" width="280" height="56" class="caixa"/><text x="714" y="282">raw/ecocrop · cache/gbif</text><text x="714" y="302" class="t-pequeno">nomes populares em português</text>
+
+                <rect x="20" y="330" width="270" height="56" class="caixa-externa"/><text x="34" y="352">IBGE + PTF da Embrapa</text><text x="34" y="372" class="t-pequeno">municípios · água disponível</text>
+                <line class="seta" x1="290" y1="358" x2="348" y2="358"/>
+                <rect x="350" y="330" width="290" height="56" class="caixa-ciano"/><text x="364" y="352">municipios.py · ptf_zarc.py</text><text x="364" y="372" class="t-pequeno">sede mais próxima · classe AD</text>
+                <line class="seta" x1="640" y1="358" x2="698" y2="358"/>
+                <rect x="700" y="330" width="280" height="56" class="caixa"/><text x="714" y="352">raw/ibge · raw/embrapa</text><text x="714" y="372" class="t-pequeno">CSV pequenos · também no Neon</text>
+
+                <rect x="20" y="400" width="270" height="56" class="caixa-externa"/><text x="34" y="422">NOAA/CPC · RONI</text><text x="34" y="442" class="t-pequeno">fase do El Niño / La Niña</text>
+                <line class="seta" x1="290" y1="428" x2="348" y2="428"/>
+                <rect x="350" y="400" width="290" height="56" class="caixa-ciano"/><text x="364" y="422">t7_extremos/enso.py</text><text x="364" y="442" class="t-pequeno">baixado na hora da consulta</text>
+                <line class="seta" x1="640" y1="428" x2="698" y2="428"/>
+                <rect x="700" y="400" width="280" height="56" class="caixa"/><text x="714" y="422">cache de 7 dias</text><text x="714" y="442" class="t-pequeno">sem índice: só a climatologia</text>
+            </svg>
+            <figcaption>Fig. 03.1 — Fontes, clientes e caches. Clima e solo são buscados por local, na primeira consulta.</figcaption>
+        </figure>
+
+        <h3>Decisões sobre o clima (NASA POWER)</h3>
+        <ul>
+            <li><strong>Chuva = GPM IMERG</strong> (<code>IMERG_PRECTOT</code>). A chuva da reanálise MERRA-2 (<code>PRECTOTCORR</code>) subestima cerca de 13% e piora nos anos recentes; ela é baixada só como diagnóstico (e para a T7, que foi calibrada com ela).</li>
+            <li><strong>Horário UTC</strong> em todas as consultas, porque o IMERG só existe em UTC. No Brasil, o "dia" vai das 21 h às 21 h locais.</li>
+            <li><strong>Série a partir de 2001</strong>, a mesma janela para todas as variáveis.</li>
+            <li><strong>Lacunas:</strong> a chuva nunca é preenchida; as outras variáveis só são interpoladas em buracos de até 3 dias. Quem consome a série descarta janelas incompletas: nulo nunca vira "não choveu".</li>
+            <li><strong>Defasagens:</strong> a MERRA-2 chega com ~2 dias, o IMERG com ~2 meses e a radiação com ~2,5 meses. A cada atualização, os últimos 120 dias são baixados de novo, para trocar valores provisórios por consolidados.</li>
+            <li><strong>Cache por célula</strong> da grade da POWER: municípios vizinhos reaproveitam o mesmo arquivo.</li>
+        </ul>
+
+        <h3>Cuidados com a Tábua do ZARC</h3>
+        <ul>
+            <li><strong>Safra vigente por cultura,</strong> não por nome: os nomes mudaram ("Arroz Irrigado"/"Arroz Sequeiro" viraram "Arroz" com o manejo em outra coluna; "Milho" virou "Milho 1ª/2ª Safra"). <code>ZARC_PARA_CULTURA</code> faz a tradução para o <code>id_cultura</code> do catálogo.</li>
+            <li><strong>Decêndios:</strong> três por mês (1–10, 11–20, 21–fim); <code>dec1</code> é 1 a 10 de janeiro. Valores 20, 30 e 40 são o risco de perda; 0 é "não indicado".</li>
+            <li><strong>Dois sistemas de solo:</strong> as classes AD 11–16 (IN MAPA nº 1/2022) e os tipos antigos 1/2/3 por textura, que algumas culturas ainda usam.</li>
+        </ul>
+
+        <h3>Solo: grade pré-calculada</h3>
+        <p>A API do SoilGrids leva 10–15 s por consulta e cai com frequência. <code>scripts/preparar_soilgrids.py</code> lê os mapas da ISRIC só na janela do Brasil e gera uma grade de 0,01° (≈ 1,1 km) em blocos de 1°, com os mesmos cálculos da API: textura média de 0–60 cm, química de 0–30 cm e as três classes WRB mais prováveis. Frente à API, o erro médio é de 1,8 ponto percentual na textura e 0,09 no pH, e a classe WRB coincide em 89% dos pontos. A API fica como reserva para pontos fora da grade.</p>
+
+        <h3>Comandos de preparação</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Comando</th><th>O que faz</th></tr>
+            <tr><td><code>python scripts/preparar_dados.py</code></td><td>Baixa ECOCROP, municípios, PTF, Tábua do ZARC (3 safras mais recentes) e os nomes do GBIF (<code>--sem-gbif</code> pula, ~7 min na 1ª vez).</td></tr>
+            <tr><td><code>python scripts/preparar_soilgrids.py</code></td><td>Gera a grade do solo do Brasil (~25 min na 1ª vez; retoma se interrompido). Requer <code>rasterio</code>.</td></tr>
+            <tr><td><code>python scripts/carregar_neon.py [tabelas]</code></td><td>Cria o esquema de <code>db/schema.sql</code> e recarrega cada tabela numa transação (TRUNCATE + COPY): rodar de novo substitui, não duplica.</td></tr>
+        </table>
+        </div>
+        <div class="arquivos" data-arquivos="towers/data/power.py towers/data/soilgrids.py towers/data/soilgrids_grade.py towers/data/zarc.py towers/data/neon.py scripts/preparar_dados.py scripts/preparar_soilgrids.py scripts/carregar_neon.py db/schema.sql"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Fontes de dados e caches</div>
+        <div><b>Prancha</b>03 / 15</div><div><b>Assunto</b>Dados</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 04 -->
+<section class="prancha" id="p04" data-titulo="Catálogo e candidatos">
+    <header class="prancha-cabecalho">
+        <span class="numero">04</span>
+        <h2>Catálogo e candidatos<small>Quais culturas entram na disputa, e em que datas e ciclos</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>O catálogo (<code>carregar_culturas</code>) é a entrada de todas as torres. Ele tem uma linha por <strong>cultura</strong>, não por espécie: a mesma espécie pode virar duas culturas, como sorgo granífero e sorgo forrageiro, com nome e tipo de colheita próprios. O produtor nunca vê nome científico, nome vazio ou erva daninha.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 390" role="img" aria-label="Camadas do catálogo de culturas e a grade de candidatos: datas e ciclos">
+                <rect x="20" y="40" width="400" height="52" class="caixa-dupla"/>
+                <text x="36" y="62">1 · culturas_obrigatorias.csv</text>
+                <text x="36" y="80" class="t-pequeno">~150 culturas do Brasil: nome, colheita, uso, modo</text>
+                <rect x="20" y="104" width="400" height="52" class="caixa"/>
+                <text x="36" y="126">2 · culturas_extra.csv</text>
+                <text x="36" y="144" class="t-pequeno">parâmetros de culturas fora do ECOCROP, com fonte</text>
+                <rect x="20" y="168" width="400" height="52" class="caixa"/>
+                <text x="36" y="190">3 · demais espécies do ECOCROP</text>
+                <text x="36" y="208" class="t-pequeno">só com nome popular brasileiro (GBIF)</text>
+                <line class="seta" x1="220" y1="220" x2="220" y2="250"/>
+                <rect x="20" y="252" width="400" height="70" class="caixa-ciano"/>
+                <text x="36" y="274">exibível?</text>
+                <text x="36" y="292" class="t-pequeno">nome em português, colheita reprodutiva ou vegetativa,</text>
+                <text x="36" y="308" class="t-pequeno">e não é erva daninha (salvo se curada)</text>
+                <path class="seta" d="M420 287 H470 V110 H508"/>
+
+                <text x="520" y="40" class="t-titulo">Candidatos de uma consulta</text>
+                <line class="linha" x1="520" y1="110" x2="968" y2="110"/>
+                <line class="linha" x1="540" y1="104" x2="540" y2="116"/><text x="540" y="96" text-anchor="middle" class="t-pequeno">−30</text>
+                <line class="linha" x1="608" y1="104" x2="608" y2="116"/><text x="608" y="96" text-anchor="middle" class="t-pequeno">−20</text>
+                <line class="linha" x1="676" y1="104" x2="676" y2="116"/><text x="676" y="96" text-anchor="middle" class="t-pequeno">−10</text>
+                <circle cx="744" cy="110" r="6" class="ponto-ciano"/><text x="744" y="96" text-anchor="middle" class="t-ciano">0</text>
+                <line class="linha" x1="812" y1="104" x2="812" y2="116"/><text x="812" y="96" text-anchor="middle" class="t-pequeno">+10</text>
+                <line class="linha" x1="880" y1="104" x2="880" y2="116"/><text x="880" y="96" text-anchor="middle" class="t-pequeno">+20</text>
+                <line class="linha" x1="948" y1="104" x2="948" y2="116"/><text x="948" y="96" text-anchor="middle" class="t-pequeno">+30</text>
+                <text x="744" y="134" text-anchor="middle" class="t-pequeno t-ciano">data pretendida</text>
+                <text x="520" y="156" class="t-pequeno">7 datas, de 10 em 10 dias (o passo dos decêndios do ZARC)</text>
+
+                <text x="520" y="190" class="t-pequeno">ciclos (modo safra): grade do ECOCROP, em dias</text>
+                <rect x="520" y="200" width="30" height="24" class="caixa"/><text x="535" y="216" text-anchor="middle" class="t-pequeno">30</text>
+                <rect x="553" y="200" width="30" height="24" class="caixa"/><text x="568" y="216" text-anchor="middle" class="t-pequeno">45</text>
+                <rect x="586" y="200" width="30" height="24" class="caixa"/><text x="601" y="216" text-anchor="middle" class="t-pequeno">60</text>
+                <rect x="619" y="200" width="30" height="24" class="caixa"/><text x="634" y="216" text-anchor="middle" class="t-pequeno">75</text>
+                <rect x="652" y="200" width="30" height="24" class="caixa"/><text x="667" y="216" text-anchor="middle" class="t-pequeno">90</text>
+                <rect x="685" y="200" width="30" height="24" class="caixa"/><text x="700" y="216" text-anchor="middle" class="t-pequeno">105</text>
+                <rect x="718" y="200" width="30" height="24" class="caixa"/><text x="733" y="216" text-anchor="middle" class="t-pequeno">120</text>
+                <rect x="751" y="200" width="30" height="24" class="caixa"/><text x="766" y="216" text-anchor="middle" class="t-pequeno">150</text>
+                <rect x="784" y="200" width="30" height="24" class="caixa"/><text x="799" y="216" text-anchor="middle" class="t-pequeno">180</text>
+                <rect x="817" y="200" width="30" height="24" class="caixa"/><text x="832" y="216" text-anchor="middle" class="t-pequeno">210</text>
+                <rect x="850" y="200" width="30" height="24" class="caixa"/><text x="865" y="216" text-anchor="middle" class="t-pequeno">240</text>
+                <rect x="883" y="200" width="30" height="24" class="caixa"/><text x="898" y="216" text-anchor="middle" class="t-pequeno">300</text>
+                <rect x="916" y="200" width="30" height="24" class="caixa"/><text x="931" y="216" text-anchor="middle" class="t-pequeno">365</text>
+                <text x="520" y="248" class="t-pequeno">T1: todos os ciclos da faixa da espécie</text>
+                <text x="520" y="264" class="t-pequeno">T2: 70% a 130% da duração típica da FAO-56</text>
+
+                <rect x="520" y="284" width="440" height="50" class="caixa-externa"/>
+                <text x="536" y="304">modo implantação (perenes): 365 dias</text>
+                <text x="536" y="322" class="t-pequeno">e um fator de pegamento nos 90 dias iniciais</text>
+
+                <text x="20" y="370" class="t-caneta">candidato = cultura × data × ciclo; no fim fica a melhor data de cada cultura</text>
+            </svg>
+            <figcaption>Fig. 04.1 — Camadas do catálogo (esquerda) e a grade de candidatos de uma consulta (direita).</figcaption>
+        </figure>
+
+        <h3>Colunas que as torres usam</h3>
+        <ul>
+            <li><strong><code>modo</code>:</strong> <code>safra</code> (anuais e bianuais: janela do plantio ao fim do ciclo) ou <code>implantacao</code> (perenes: avaliadas no ano inteiro, como implantação). Vem do ciclo de vida do ECOCROP (anual ou bianual → safra); sem essa informação, safra se o ciclo mínimo for de até 180 dias.</li>
+            <li><strong><code>colheita</code>:</strong> <code>reprodutiva</code> (grão, fruto) ou <code>vegetativa</code> (folha, raiz). Decide qual alerta de fotoperíodo vale e se a geada na floração conta.</li>
+            <li><strong><code>uso</code>:</strong> agricultura ou silvicultura; <code>tipo_cultura</code>: os 9 tipos que o produtor pode marcar (grãos, hortaliças, frutas, raízes, forrageiras e cobertura, perenes industriais, aromáticas, silvicultura, outras).</li>
+            <li><strong><code>KTMP</code> / <code>KTMPR</code>:</strong> temperatura letal na fase inicial e na planta estabelecida. Sem <code>KTMP</code> na base, ele é imputado (−1 °C para espécies temperadas, 0 °C para tropicais) e marcado em <code>ktmp_origem</code>.</li>
+            <li><strong><code>obrigatoria</code> e <code>escala_cultivo</code>:</strong> cultura curada e o quanto ela é cultivada no país. Servem de desempate e para limitar o grupo das piores (o produtor não precisa saber que uma espécie exótica foi mal).</li>
+            <li><strong>Flags de qualidade</strong> (<code>ciclo_conhecido</code>, <code>chuva_conhecida</code>, <code>foto_conhecido</code>, <code>fonte_parametros</code>): alimentam o peso da evidência no combinador (prancha 11).</li>
+        </ul>
+        <div class="dica">As torres recebem o catálogo com <code>colapsar_variantes=False</code>: variantes de uma mesma cultura (ex.: grupos de arroz) são avaliadas separadamente, e só o ordenador fica com a melhor.</div>
+        <div class="arquivos" data-arquivos="towers/data/culturas.py towers/data/ecocrop.py towers/data/taxonomia.py towers/data/culturas_obrigatorias.csv towers/data/culturas_extra.csv"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Catálogo e candidatos</div>
+        <div><b>Prancha</b>04 / 15</div><div><b>Assunto</b>Espaço de busca</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 05 -->
+<section class="prancha" id="p05" data-titulo="T1 · Aptidão climática">
+    <header class="prancha-cabecalho">
+        <span class="numero">05</span>
+        <h2>T1 · Aptidão climática<small>O clima do local, nesta janela, comporta a cultura? (ECOCROP × NASA POWER)</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>A T1 aplica o modelo Ecocrop a cada ano histórico da série da POWER. Para cada janela (ano × data × ciclo), mede a temperatura e a chuva e compara com as faixas da espécie por meio de trapézios. A nota do ano é o pior fator (lei do mínimo). Depois, os anos são resumidos com mais peso para os recentes.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 340" role="img" aria-label="Função trapézio do ECOCROP e o fluxo de cálculo da T1">
+                <text x="60" y="24" class="t-pequeno">trapézio do ECOCROP (temperatura, chuva; na T3, pH)</text>
+                <line class="linha" x1="60" y1="200" x2="470" y2="200"/>
+                <line class="linha" x1="60" y1="50" x2="60" y2="200"/>
+                <text x="50" y="64" text-anchor="end" class="t-pequeno">1</text>
+                <text x="50" y="204" text-anchor="end" class="t-pequeno">0</text>
+                <path class="linha-ciano" d="M60 200 H100 L180 60 H340 L420 200 H470"/>
+                <text x="260" y="52" text-anchor="middle" class="t-pequeno t-ciano">ótimo</text>
+                <line class="linha-fina" x1="180" y1="60" x2="180" y2="200"/>
+                <line class="linha-fina" x1="340" y1="60" x2="340" y2="200"/>
+                <text x="100" y="218" text-anchor="middle" class="t-pequeno">TMIN</text>
+                <text x="180" y="218" text-anchor="middle" class="t-pequeno">TOPMN</text>
+                <text x="340" y="218" text-anchor="middle" class="t-pequeno">TOPMX</text>
+                <text x="420" y="218" text-anchor="middle" class="t-pequeno">TMAX</text>
+                <line x1="76" y1="70" x2="76" y2="200" stroke="#ff9e8a" stroke-width="1.4" stroke-dasharray="4 3"/>
+                <text x="76" y="84" text-anchor="middle" class="t-pequeno t-alerta">KTMP</text>
+                <text x="60" y="250" class="t-pequeno">temperatura: pior média móvel de 30 dias (mês frio e quente)</text>
+                <text x="60" y="268" class="t-pequeno">chuva: soma no ciclo (1,0 se irrigado ou sem dado)</text>
+                <text x="60" y="286" class="t-pequeno">geada: mínima diária ≤ KTMP + 1 °C mata a cultura no ano</text>
+                <text x="60" y="320" class="t-caneta">o pior fator manda (lei do mínimo)</text>
+
+                <rect x="540" y="24" width="420" height="56" class="caixa"/>
+                <text x="556" y="46">Janelas climáticas</text>
+                <text x="556" y="64" class="t-pequeno">ano × data × ciclo · chuva IMERG, T2M, T2M_MIN</text>
+                <line class="seta" x1="750" y1="80" x2="750" y2="98"/>
+                <rect x="540" y="100" width="420" height="60" class="caixa-ciano"/>
+                <text x="556" y="122">Aptidão do ano</text>
+                <text x="556" y="140" class="t-pequeno">min(temperatura, chuva, pegamento)</text>
+                <text x="556" y="154" class="t-pequeno">× 0 se houve geada letal na fase</text>
+                <line class="seta" x1="750" y1="160" x2="750" y2="178"/>
+                <rect x="540" y="180" width="420" height="62" class="caixa-ciano"/>
+                <text x="556" y="202">Entre os anos</text>
+                <text x="556" y="220" class="t-pequeno">peso 0,5^(idade/10): média, P20,</text>
+                <text x="556" y="234" class="t-pequeno">prob_apta (≥ 0,5) e prob_letal</text>
+                <line class="seta" x1="750" y1="242" x2="750" y2="260"/>
+                <rect x="540" y="262" width="420" height="60" class="caixa-dupla"/>
+                <text x="556" y="284">Melhor ciclo + gate</text>
+                <text x="556" y="302" class="t-pequeno">gate_t1 = prob_apta ≥ 0,5 · fator limitante</text>
+                <text x="556" y="316" class="t-pequeno">alerta de fotoperíodo por data</text>
+            </svg>
+            <figcaption>Fig. 05.1 — O trapézio (esquerda) dá a nota de cada fator; o fluxo (direita) vai da janela de um ano ao gate.</figcaption>
+        </figure>
+
+        <h3>Nota de um ano</h3>
+        <code class="formula">s_temp  = min(trap(t_mes_frio), trap(t_mes_quente))     TMIN / TOPMN / TOPMX / TMAX
+s_chuva = trap(chuva do ciclo, RMIN, ROPMN, ROPMX, RMAX)
+s_peg   = min(trap(t 90 dias), chuva 90 dias / chuva ideal)   só perenes
+letal   = tmin_inicial ≤ KTMP + 1   ou   tmin_resto ≤ KTMPR + 1
+aptidao = min(s_temp, s_chuva, s_peg), ou 0 se letal</code>
+        <ul>
+            <li><strong>Temperatura mensal, não diária:</strong> os limites do ECOCROP foram calibrados com médias mensais. A T1 usa a menor e a maior média móvel de 30 dias da janela: como o trapézio é monótono de cada lado, o pior mês é sempre um dos dois extremos.</li>
+            <li><strong>Geada por fase:</strong> nos primeiros 15 dias vale o <code>KTMP</code> (planta jovem); depois, o <code>KTMPR</code> (planta estabelecida), ou o <code>KTMP</code> se faltar. A margem de +1 °C compensa a diferença entre o ar a 2 m numa célula de ~50 km e a folha no talhão.</li>
+            <li><strong>Janelas incompletas são descartadas:</strong> como o IMERG chega com ~2 meses de atraso, as janelas mais recentes ficam de fora em vez de contarem um dia sem dado como dia seco.</li>
+        </ul>
+
+        <h3>Saída por candidato</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Coluna</th><th>Significado</th></tr>
+            <tr><td><code>score_t1</code></td><td>Aptidão média ponderada pela recência, no melhor ciclo. É a que entra no combinador.</td></tr>
+            <tr><td><code>apt_p20</code></td><td>Aptidão mínima em 80% dos anos. Substitui o <code>score_t1</code> no objetivo "estabilidade".</td></tr>
+            <tr><td><code>prob_apta</code> / <code>prob_letal</code></td><td>Fração ponderada de anos aptos (≥ 0,5) e de anos com geada letal.</td></tr>
+            <tr><td><code>gate_t1</code></td><td>Falso se <code>prob_apta</code> &lt; 0,5: o candidato é eliminado no combinador.</td></tr>
+            <tr><td><code>fator_limitante</code></td><td>Geada (se mata em ≥ 20% dos anos), temperatura, chuva ou pegamento.</td></tr>
+            <tr><td><code>alerta_foto_*</code></td><td>Floração impedida, floração atrasada ou pendoamento precoce, pelo comprimento do dia entre 20% e 50% do ciclo. Suprimido onde o ZARC indica a cultura (há cultivar adaptada).</td></tr>
+            <tr><td><code>alerta_ciclo_extremo</code></td><td>O melhor ciclo está no quarto inferior ou superior da faixa da espécie: exige cultivar muito precoce ou tardia.</td></tr>
+        </table>
+        </div>
+        <div class="aviso">O fotoperíodo é só alerta, não entra na nota. E a geada na floração (<code>FASE_FLORACAO_PADRAO</code>) está implementada mas <strong>desligada</strong>: na calibração não melhorou a concordância com o ZARC (0,641 → 0,644) e piorou o trigo (0,549 → 0,489).</div>
+        <div class="arquivos" data-arquivos="towers/t1_aptidao/torre.py towers/t1_aptidao/aptidao.py towers/t1_aptidao/janelas.py towers/t1_aptidao/calibracao.py towers/utils/astronomia.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">T1 · Aptidão climática</div>
+        <div><b>Prancha</b>05 / 15</div><div><b>Assunto</b>Torre 1</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 06 -->
+<section class="prancha" id="p06" data-titulo="T2 · Simulação hídrica">
+    <header class="prancha-cabecalho">
+        <span class="numero">06</span>
+        <h2>T2 · Simulação hídrica<small>Partindo da água que o solo tem hoje, quanto a safra perde por falta de água?</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>A T2 é o núcleo de simulação. Ela roda um <strong>balanço hídrico diário FAO-56</strong> para cada candidato, repetindo a safra com o clima de cada ano histórico (ensemble de anos análogos). O ponto de partida é a umidade do solo de hoje. O resultado é uma distribuição de quebras de rendimento, resumida em probabilidades.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 340" role="img" aria-label="Zona de raízes como reservatório e a curva do coeficiente de estresse Ks">
+                <rect x="60" y="60" width="160" height="220" class="caixa"/>
+                <rect x="61" y="120" width="158" height="159" class="area-ciano"/>
+                <line class="linha-ciano" x1="60" y1="120" x2="220" y2="120"/>
+                <line x1="60" y1="170" x2="220" y2="170" stroke="#ffd27a" stroke-width="1.4" stroke-dasharray="6 4"/>
+                <path class="seta" d="M100 20 V58"/>
+                <text x="108" y="34" class="t-pequeno">chuva P</text>
+                <path class="seta" d="M180 58 V20"/>
+                <text x="188" y="34" class="t-pequeno">ETa</text>
+                <text x="232" y="64" class="t-pequeno">Dr = 0 (capacidade de campo)</text>
+                <text x="232" y="124" class="t-pequeno t-ciano">água hoje (GWETROOT)</text>
+                <text x="232" y="174" class="t-pequeno">Dr = RAW = p · TAW</text>
+                <text x="232" y="284" class="t-pequeno">Dr = TAW (murcha)</text>
+                <text x="60" y="310" class="t-pequeno">TAW = AD (mm/cm) × raiz (≤ 40 cm)</text>
+
+                <text x="500" y="36" class="t-pequeno">ETa = Ks × Kc × ET0 (FAO-56, eq. 84)</text>
+                <line class="linha" x1="500" y1="50" x2="500" y2="260"/>
+                <line class="linha" x1="500" y1="260" x2="910" y2="260"/>
+                <text x="490" y="56" text-anchor="end" class="t-pequeno">Ks</text>
+                <text x="492" y="84" text-anchor="end" class="t-pequeno">1</text>
+                <text x="492" y="264" text-anchor="end" class="t-pequeno">0</text>
+                <path class="linha-ciano" d="M500 80 H700 L900 260"/>
+                <line class="linha-fina" x1="700" y1="80" x2="700" y2="260"/>
+                <text x="500" y="278" text-anchor="middle" class="t-pequeno">0</text>
+                <text x="700" y="278" text-anchor="middle" class="t-pequeno">RAW</text>
+                <text x="900" y="278" text-anchor="middle" class="t-pequeno">TAW</text>
+                <text x="920" y="264" class="t-pequeno">Dr</text>
+                <text x="600" y="72" text-anchor="middle" class="t-pequeno t-ciano">sem estresse</text>
+                <text x="500" y="320" class="t-caneta">passou de RAW, a planta transpira menos e o rendimento cai</text>
+            </svg>
+            <figcaption>Fig. 06.1 — A zona de raízes como um reservatório (esquerda) e o coeficiente de estresse Ks (direita).</figcaption>
+        </figure>
+
+        <h3>O balanço, dia a dia</h3>
+        <code class="formula">Ks  = 1                              se Dr ≤ RAW
+    = (TAW − Dr) / ((1 − p) × TAW)   se Dr > RAW
+ETa = Ks × Kc(dia) × ET0
+Dr  = clip(Dr − P + ETa, 0, TAW)     o excesso drena (sem escoamento na v0)</code>
+        <ul>
+            <li><strong>ET0:</strong> Penman-Monteith (FAO-56 eq. 6) onde há radiação, umidade, vento e pressão; Hargreaves onde a radiação ainda não foi publicada.</li>
+            <li><strong>Kc:</strong> curva de coeficiente único com as fases inicial, desenvolvimento, intermediária e final da FAO-56. Os parâmetros (<code>kc_*</code>, frações das fases, raiz, <code>p</code>, <code>Ky</code>) vêm de <code>parametros_fao56.csv</code>: valores específicos das principais culturas e, para as demais, valores típicos de 11 grupos.</li>
+            <li><strong>Água disponível (AD):</strong> textura do SoilGrids → PTF do ZARC/Embrapa (Teixeira et al., 2021) → mm de água por cm de solo e a classe AD. Sem solo, vale a AD 4 (1,10 mm/cm), a classe mais comum.</li>
+            <li><strong>Raiz até 40 cm:</strong> teto calibrado contra o ZARC (prancha 13). É também a profundidade efetiva que o próprio ZARC usa.</li>
+            <li><strong>Estado inicial:</strong> o <code>GWETROOT</code> da POWER é a umidade da zona de raízes como fração da saturação; em Londrina ele nunca sai de 0,58–1,00. Por isso é normalizado pelo histórico da célula: <code>(gwet − p02) / (p98 − p02)</code>. Plantios futuros simulam o solo nu (Kc 0,3) de hoje até a data do plantio, em cada ano análogo.</li>
+        </ul>
+
+        <h3>Do balanço à nota</h3>
+        <code class="formula">razao    = ΣETa / ΣETc no ciclo
+queda    = clip(Ky × (1 − razao), 0, 1)          FAO-33
+ISNA     = ETa / ETc na fase intermediária        critério do ZARC
+score_t2 = 1 − queda média ponderada (peso 0,5^(idade/10))</code>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Coluna</th><th>Significado</th></tr>
+            <tr><td><code>score_t2</code></td><td>1 − quebra média de rendimento por água, no melhor ciclo da própria T2.</td></tr>
+            <tr><td><code>prob_perda20</code></td><td>Chance de perder mais de 20%. No objetivo "estabilidade", <code>1 − prob_perda20</code> substitui o score.</td></tr>
+            <tr><td><code>prob_isna_critico</code></td><td>Chance de o ISNA da floração ficar abaixo de 0,5: é o risco hídrico do ZARC.</td></tr>
+            <tr><td><code>irrigacao_mm_med</code></td><td>Lâmina que faltou (ΣETc − ΣETa). Com <code>irrigado</code>, não há déficit, mas a lâmina continua informada.</td></tr>
+            <tr><td><code>agua_solo_hoje</code>, <code>classe_ad</code></td><td>O ponto de partida e o solo usado, mostrados no resumo da recomendação.</td></tr>
+        </table>
+        </div>
+        <div class="dica">A simulação é vetorizada: todas as culturas com a mesma duração de ciclo andam juntas num array [culturas × anos, dias]. É isso que permite simular centenas de culturas × 7 datas × ~25 anos dentro do prazo de 30 s.</div>
+        <div class="arquivos" data-arquivos="towers/t2_hidrica/torre.py towers/t2_hidrica/balanco.py towers/t2_hidrica/estado_inicial.py towers/t2_hidrica/validacao.py towers/data/fao56.py towers/data/parametros_fao56.csv towers/data/ptf_zarc.py towers/utils/et0.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">T2 · Simulação hídrica</div>
+        <div><b>Prancha</b>06 / 15</div><div><b>Assunto</b>Torre 2</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 07 -->
+<section class="prancha" id="p07" data-titulo="T3 · Solo">
+    <header class="prancha-cabecalho">
+        <span class="numero">07</span>
+        <h2>T3 · Solo<small>O solo do local atende os requisitos da cultura? (SoilGrids + o que o produtor informa)</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>A T3 não depende da data nem das outras torres, e não pontua a retenção de água (isso é da T2). Ela monta um perfil do solo nas mesmas classes que o ECOCROP usa e compara com os requisitos de cada cultura: pH, textura, drenagem, profundidade, fertilidade, salinidade e compactação. A nota é o componente mais limitante.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 350" role="img" aria-label="Fontes do perfil do solo, perfil e componentes da nota da T3">
+                <rect x="20" y="40" width="260" height="50" class="caixa-dupla"/>
+                <text x="34" y="62">1 · análise de solo</text>
+                <text x="34" y="80" class="t-pequeno">pH, argila, areia, CTC</text>
+                <rect x="20" y="104" width="260" height="50" class="caixa"/>
+                <text x="34" y="126">2 · problemas marcados</text>
+                <text x="34" y="144" class="t-pequeno">ácido, arenoso, encharcado…</text>
+                <rect x="20" y="168" width="260" height="50" class="caixa"/>
+                <text x="34" y="190">3 · SoilGrids 2.0</text>
+                <text x="34" y="208" class="t-pequeno">grade 0,01° · API de reserva</text>
+                <text x="20" y="246" class="t-caneta">o produtor prevalece sobre o mapa</text>
+                <line class="seta" x1="280" y1="129" x2="318" y2="129"/>
+
+                <rect x="320" y="40" width="280" height="178" class="caixa-dupla"/>
+                <text x="460" y="64" text-anchor="middle">Perfil do solo</text>
+                <text x="336" y="88" class="t-pequeno">pH em água</text>
+                <text x="336" y="106" class="t-pequeno">textura: arenosa, média, argilosa</text>
+                <text x="336" y="124" class="t-pequeno">fertilidade pela CTC a pH 7</text>
+                <text x="336" y="142" class="t-pequeno">drenagem, profundidade, salinidade</text>
+                <text x="336" y="160" class="t-pequeno">  pela classe WRB (prob. ≥ 30%)</text>
+                <text x="336" y="178" class="t-pequeno">compactado (só o produtor diz)</text>
+                <line class="seta" x1="600" y1="129" x2="638" y2="129"/>
+
+                <rect x="640" y="30" width="340" height="180" class="caixa"/>
+                <text x="656" y="50" class="t-pequeno t-ciano">componente · nota (1 = ótimo)</text>
+                <text x="656" y="74">pH: trapézio · ácido → piso 0,8</text>
+                <text x="656" y="94">textura: 1,0 / 0,6 / mín. 0,5</text>
+                <text x="656" y="114">drenagem: 1,0 / 0,6 / 0,2</text>
+                <text x="656" y="134">profundidade: 1,0 / 0,6 / 0,2</text>
+                <text x="656" y="154">fertilidade baixa → piso 0,8</text>
+                <text x="656" y="174">salinidade: 1,0 / 0,6 / 0,2</text>
+                <text x="656" y="194">compactação: 0,8 + alerta</text>
+                <line class="seta" x1="810" y1="210" x2="810" y2="238"/>
+                <rect x="640" y="240" width="340" height="56" class="caixa-ciano"/>
+                <text x="656" y="262">score_t3 = min(componentes)</text>
+                <text x="656" y="282" class="t-pequeno">sem dado → componente neutro (1,0)</text>
+                <text x="320" y="330" class="t-caneta">corrigível (calagem, adubação) não elimina: vira alerta</text>
+            </svg>
+            <figcaption>Fig. 07.1 — Fontes do perfil (esquerda), perfil nas classes do ECOCROP (centro) e as regras de cada componente (direita).</figcaption>
+        </figure>
+
+        <h3>Classes do perfil</h3>
+        <ul>
+            <li><strong>Textura</strong> pelo grupamento textural do SiBCS (Embrapa): arenosa se argila &lt; 15% e areia ≥ 70%; argilosa se argila ≥ 35%; média no resto.</li>
+            <li><strong>Fertilidade</strong> pela CTC a pH 7, faixas da 5ª Aproximação (CFSEMG, 1999): até 4,30 baixa; até 8,60 média; acima, alta.</li>
+            <li><strong>Drenagem, profundidade e salinidade</strong> pela classe WRB, que o SoilGrids mapeia com probabilidade (ele não mapeia esses atributos diretamente). Só vale se a classe tiver ≥ 30%: Gleysols, Stagnosols, Planosols e Histosols → mal drenado; Arenosols → excessivo; Leptosols → raso; Ferralsols e Arenosols → profundo; Solonchaks → salino.</li>
+        </ul>
+
+        <h3>Regras brasileiras sobre o ECOCROP</h3>
+        <ul>
+            <li><strong>Acidez e baixa fertilidade são corrigíveis</strong> (calagem, adubação): a nota não cai abaixo de 0,8, e o cartão mostra o alerta. Solo alcalino não tem piso.</li>
+            <li><strong>Latossolos e Nitossolos argilosos</strong> são bem agregados e drenam como textura média: vale a melhor das duas leituras.</li>
+            <li><strong>Textura não elimina:</strong> o piso é 0,5. Referência: café em Argissolo argiloso no Paraná.</li>
+            <li><strong>Fluvisols não são mal drenados</strong> automaticamente: no semiárido, os Neossolos Flúvicos são aluviais bem drenados.</li>
+            <li><strong>Requisitos corrigidos:</strong> arroz e açaí ganham tolerância a solo mal drenado e bem drenado, porque o ECOCROP descreve só o arroz inundado e o açaí de várzea.</li>
+        </ul>
+        <div class="dica">Sem essas regras, o benchmark contra o plantio real (prancha 13) eliminava indevidamente 12,7% das culturas que os municípios efetivamente plantam. Com elas, 1,7%.</div>
+        <div class="arquivos" data-arquivos="towers/t3_solo/torre.py towers/t3_solo/perfil.py towers/t3_solo/aptidao.py towers/t3_solo/validacao.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">T3 · Solo</div>
+        <div><b>Prancha</b>07 / 15</div><div><b>Assunto</b>Torre 3</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 08 -->
+<section class="prancha" id="p08" data-titulo="T4 e T6 · Zoneamento e crédito">
+    <header class="prancha-cabecalho">
+        <span class="numero">08</span>
+        <h2>T4 e T6 · Zoneamento e crédito<small>O ZARC indica este plantio? E dá para financiar e segurar?</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>As duas torres leem a mesma Tábua de Risco do ZARC, para o mesmo município, decêndio e classe de solo, mas respondem perguntas diferentes. A <strong>T4</strong> transforma o risco oficial numa nota agronômica. A <strong>T6</strong> diz se o candidato é elegível a crédito de custeio, Proagro e seguro (PSR), somando as regras do imóvel. A T6 não entra na média: vira filtro ("só financiáveis") e selo no cartão.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 475" role="img" aria-label="Árvore de decisão do ZARC para as torres T4 e T6 e exemplo de decêndios">
+                <rect x="20" y="30" width="200" height="50" class="caixa"/>
+                <text x="120" y="52" text-anchor="middle">candidato</text>
+                <text x="120" y="70" text-anchor="middle" class="t-pequeno">cultura × data</text>
+                <line class="seta" x1="220" y1="55" x2="278" y2="55"/>
+                <path d="M380 15 L480 55 L380 95 L280 55 z" class="caixa-ciano"/>
+                <text x="380" y="51" text-anchor="middle">zoneada no</text>
+                <text x="380" y="67" text-anchor="middle">município?</text>
+                <line class="seta" x1="380" y1="95" x2="380" y2="128"/>
+                <text x="388" y="116" class="t-pequeno">não</text>
+                <rect x="280" y="130" width="200" height="62" class="caixa-externa"/>
+                <text x="380" y="152" text-anchor="middle">sem zoneamento</text>
+                <text x="380" y="170" text-anchor="middle" class="t-pequeno">T4 nula (neutra)</text>
+                <text x="380" y="184" text-anchor="middle" class="t-pequeno">T6 a verificar</text>
+                <line class="seta" x1="480" y1="55" x2="548" y2="55"/>
+                <text x="500" y="47" class="t-pequeno">sim</text>
+                <rect x="550" y="30" width="200" height="50" class="caixa"/>
+                <text x="650" y="52" text-anchor="middle">decêndio da data</text>
+                <text x="650" y="70" text-anchor="middle" class="t-pequeno">dec1 … dec36</text>
+                <line class="seta" x1="750" y1="55" x2="798" y2="55"/>
+                <rect x="800" y="30" width="180" height="50" class="caixa"/>
+                <text x="890" y="52" text-anchor="middle">solo do local</text>
+                <text x="890" y="70" text-anchor="middle" class="t-pequeno">AD 11–16 (SoilGrids)</text>
+                <line class="seta" x1="890" y1="80" x2="890" y2="128"/>
+                <path d="M890 130 L980 175 L890 220 L800 175 z" class="caixa-ciano"/>
+                <text x="890" y="171" text-anchor="middle">risco</text>
+                <text x="890" y="187" text-anchor="middle">no dec.?</text>
+                <line class="seta" x1="800" y1="175" x2="652" y2="175"/>
+                <text x="700" y="167" class="t-pequeno">20/30/40</text>
+                <rect x="450" y="145" width="200" height="62" class="caixa-dupla"/>
+                <text x="550" y="167" text-anchor="middle">indicado</text>
+                <text x="550" y="185" text-anchor="middle" class="t-pequeno">T4: 20%→1 · 30%→0,85</text>
+                <text x="550" y="199" text-anchor="middle" class="t-pequeno">40%→0,70 · T6 elegível</text>
+                <line class="seta" x1="890" y1="220" x2="890" y2="268"/>
+                <text x="898" y="250" class="t-pequeno">0</text>
+                <rect x="790" y="270" width="190" height="62" class="caixa-alerta"/>
+                <text x="885" y="292" text-anchor="middle">não indicado</text>
+                <text x="885" y="310" text-anchor="middle" class="t-pequeno">T4 = 0</text>
+                <text x="885" y="324" text-anchor="middle" class="t-pequeno">T6 inelegível</text>
+
+                <rect x="20" y="230" width="400" height="110" class="caixa-externa"/>
+                <text x="36" y="252">imóvel (opcional, só T6)</text>
+                <text x="36" y="274" class="t-pequeno">CAR cancelado, suspenso ou inexistente → inelegível</text>
+                <text x="36" y="292" class="t-pequeno">terra indígena → inelegível</text>
+                <text x="36" y="310" class="t-pequeno">embargo IBAMA com CAR ativo → condicional</text>
+                <text x="36" y="328" class="t-pequeno">unidade de conservação → só aviso</text>
+                <path class="seta-tracejada" d="M420 285 H550 V209"/>
+                <text x="430" y="278" class="t-pequeno">prevalece</text>
+
+                <text x="20" y="372" class="t-pequeno">exemplo ilustrativo: decêndios de outubro a dezembro e as 7 datas de um plantio pretendido em 20/11</text>
+                <rect x="40" y="384" width="100" height="34" class="caixa-alerta"/><text x="90" y="398" text-anchor="middle" class="t-pequeno">dec28</text><text x="90" y="412" text-anchor="middle" class="t-pequeno">0</text>
+                <rect x="140" y="384" width="100" height="34" class="caixa"/><text x="190" y="398" text-anchor="middle" class="t-pequeno">dec29</text><text x="190" y="412" text-anchor="middle" class="t-pequeno">40</text>
+                <rect x="240" y="384" width="100" height="34" class="caixa"/><text x="290" y="398" text-anchor="middle" class="t-pequeno">dec30</text><text x="290" y="412" text-anchor="middle" class="t-pequeno">30</text>
+                <rect x="340" y="384" width="100" height="34" class="caixa-ciano"/><text x="390" y="398" text-anchor="middle" class="t-pequeno">dec31</text><text x="390" y="412" text-anchor="middle" class="t-pequeno">20</text>
+                <rect x="440" y="384" width="100" height="34" class="caixa-ciano"/><text x="490" y="398" text-anchor="middle" class="t-pequeno">dec32</text><text x="490" y="412" text-anchor="middle" class="t-pequeno">20</text>
+                <rect x="540" y="384" width="100" height="34" class="caixa-ciano"/><text x="590" y="398" text-anchor="middle" class="t-pequeno">dec33</text><text x="590" y="412" text-anchor="middle" class="t-pequeno">20</text>
+                <rect x="640" y="384" width="100" height="34" class="caixa"/><text x="690" y="398" text-anchor="middle" class="t-pequeno">dec34</text><text x="690" y="412" text-anchor="middle" class="t-pequeno">30</text>
+                <rect x="740" y="384" width="100" height="34" class="caixa"/><text x="790" y="398" text-anchor="middle" class="t-pequeno">dec35</text><text x="790" y="412" text-anchor="middle" class="t-pequeno">40</text>
+                <rect x="840" y="384" width="100" height="34" class="caixa-alerta"/><text x="890" y="398" text-anchor="middle" class="t-pequeno">dec36</text><text x="890" y="412" text-anchor="middle" class="t-pequeno">0</text>
+                <circle cx="280" cy="432" r="4" class="ponto-ciano"/><circle cx="300" cy="432" r="4" class="ponto-ciano"/>
+                <circle cx="390" cy="432" r="4" class="ponto-ciano"/><circle cx="490" cy="432" r="6" class="ponto-ciano"/>
+                <circle cx="590" cy="432" r="4" class="ponto-ciano"/><circle cx="690" cy="432" r="4" class="ponto-ciano"/>
+                <circle cx="790" cy="432" r="4" class="ponto-ciano"/>
+                <text x="40" y="462" class="t-caneta">20/11 ± 30 dias cai nos decêndios 30 a 35; cada data tem a sua nota</text>
+            </svg>
+            <figcaption>Fig. 08.1 — Decisão por candidato (acima) e a passagem das datas para os decêndios do ZARC (abaixo, valores ilustrativos).</figcaption>
+        </figure>
+
+        <h3>T4 · Por que a escala 1 / 0,85 / 0,70</h3>
+        <p>A nota natural seria <code>1 − risco</code>, mas isso puniria toda cultura zoneada, mesmo na melhor classe (risco 20% → 0,8), frente às culturas sem zoneamento, que ficam neutras. Por isso a melhor classe vale 1,0. Ciclo, clima e manejo do ZARC usam a melhor combinação, porque o produtor escolhe a cultivar. Linhas irrigadas só entram se o produtor irriga. A saída traz também a <strong>portaria</strong> do ZARC, a referência que o crédito e o Proagro exigem.</p>
+        <div class="aviso">O ZARC já embute clima e solo, as mesmas informações de T1, T2 e T3. Para não contar a mesma coisa duas vezes, a T4 tem peso baixo em todos os objetivos, menos em "financiamento" (prancha 11).</div>
+
+        <h3>T6 · Status de elegibilidade</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Status</th><th>Quando</th><th>Financiável?</th></tr>
+            <tr><td><code>elegivel</code></td><td>ZARC indica cultura, município, data e solo; nenhum impedimento conhecido do imóvel.</td><td>sim</td></tr>
+            <tr><td><code>condicional</code></td><td>Elegível, mas com área embargada e CAR ativo (Res. CMN 5.193/2024, até meados de 2027).</td><td>sim</td></tr>
+            <tr><td><code>inelegivel</code></td><td>Fora da janela do ZARC, ou CAR irregular, ou terra indígena, ou embargo sem CAR ativo.</td><td>não</td></tr>
+            <tr><td><code>a_verificar</code></td><td>Cultura sem ZARC no município (outro zoneamento; sem Proagro e PSR) ou perene/silvicultura (crédito de investimento).</td><td>não</td></tr>
+        </table>
+        </div>
+        <p>As regras vêm com fonte e vigência em <code>t6_elegibilidade/regras.py</code> (<code>VIGENCIA</code> = Plano Safra 2025/2026). Cada candidato elegível recebe o aviso de usar cultivar registrada no RNC e indicada na portaria, e todos recebem o aviso geral: confirmar com a instituição financeira.</p>
+        <div class="arquivos" data-arquivos="towers/t4_zarc/torre.py towers/t6_elegibilidade/torre.py towers/t6_elegibilidade/regras.py towers/data/zarc.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">T4 e T6 · Zoneamento e crédito</div>
+        <div><b>Prancha</b>08 / 15</div><div><b>Assunto</b>Torres 4 e 6</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 09 -->
+<section class="prancha" id="p09" data-titulo="T5 · Rotação">
+    <header class="prancha-cabecalho">
+        <span class="numero">09</span>
+        <h2>T5 · Rotação<small>O histórico das duas últimas safras favorece ou prejudica cada candidata?</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>A T5 parte de uma base neutra de 0,75 e soma ajustes de regras agronômicas, limitando o resultado a [0, 1]. Ela compara a espécie e a família botânica (nomes antigos do ECOCROP convertidos para os atuais: Leguminosae → Fabaceae, Gramineae → Poaceae…). Não depende da data nem do local.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 320" role="img" aria-label="Exemplo de histórico milho, soja e as notas de rotação de quatro candidatas">
+                <rect x="20" y="40" width="220" height="60" class="caixa"/>
+                <text x="130" y="64" text-anchor="middle">penúltima safra</text>
+                <text x="130" y="84" text-anchor="middle" class="t-pequeno">Milho · Poaceae</text>
+                <line class="seta" x1="240" y1="70" x2="278" y2="70"/>
+                <rect x="280" y="40" width="220" height="60" class="caixa"/>
+                <text x="390" y="64" text-anchor="middle">última safra</text>
+                <text x="390" y="84" text-anchor="middle" class="t-pequeno">Soja · Fabaceae</text>
+                <line class="seta" x1="500" y1="70" x2="538" y2="70"/>
+                <rect x="540" y="30" width="440" height="80" class="caixa-dupla"/>
+                <text x="760" y="60" text-anchor="middle">próxima safra: cada candidata</text>
+                <text x="760" y="82" text-anchor="middle" class="t-pequeno">score_t5 = 0,75 + ajustes, limitado a [0, 1]</text>
+
+                <text x="40" y="146" class="t-pequeno t-ciano">candidata</text>
+                <text x="240" y="146" class="t-pequeno t-ciano">regras aplicadas</text>
+                <text x="760" y="146" class="t-pequeno t-ciano">score</text>
+                <line class="linha-fina" x1="20" y1="156" x2="980" y2="156"/>
+                <text x="40" y="182">Milho</text><text x="240" y="182" class="t-pequeno">gramínea após leguminosa +0,15</text>
+                <text x="760" y="182">0,90</text><rect x="810" y="172" width="144" height="10" class="caixa-ciano"/>
+                <line class="linha-fina" x1="20" y1="196" x2="980" y2="196"/>
+                <text x="40" y="222">Feijão</text><text x="240" y="222" class="t-pequeno">mesma família −0,10 · mofo-branco −0,10</text>
+                <text x="760" y="222">0,55</text><rect x="810" y="212" width="88" height="10" class="caixa-ciano"/>
+                <line class="linha-fina" x1="20" y1="236" x2="980" y2="236"/>
+                <text x="40" y="262">Soja</text><text x="240" y="262" class="t-pequeno">monocultura −0,25</text>
+                <text x="760" y="262">0,50</text><rect x="810" y="252" width="80" height="10" class="caixa-ciano"/>
+                <line class="linha-fina" x1="20" y1="276" x2="980" y2="276"/>
+                <text x="40" y="302">Café (perene)</text><text x="240" y="302" class="t-pequeno">rotação não se aplica: nota nula, neutra no combinador</text>
+                <text x="760" y="302">—</text>
+            </svg>
+            <figcaption>Fig. 09.1 — Histórico milho → soja e a nota de rotação de quatro candidatas (barra cheia = 1,0).</figcaption>
+        </figure>
+
+        <h3>Regras (v0)</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Regra</th><th>Ajuste</th><th>Base agronômica</th></tr>
+            <tr><td>Mesma cultura da safra anterior</td><td class="num">−0,25</td><td>acúmulo de pragas, doenças e daninhas específicas</td></tr>
+            <tr><td>Mesma cultura nas duas últimas</td><td class="num">−0,20</td><td>monocultura contínua agrava o inóculo</td></tr>
+            <tr><td>Mesma família da safra anterior</td><td class="num">−0,10</td><td>famílias próximas compartilham pragas e doenças</td></tr>
+            <tr><td>Mesma família da penúltima</td><td class="num">−0,05</td><td>idem, efeito menor</td></tr>
+            <tr><td>Gramínea após leguminosa</td><td class="num">+0,15</td><td>nitrogênio residual da fixação biológica</td></tr>
+            <tr><td>Outra cultura após leguminosa</td><td class="num">+0,05</td><td>nitrogênio residual</td></tr>
+            <tr><td>Após gramínea</td><td class="num">+0,10</td><td>palhada para plantio direto; quebra doenças de folhas largas</td></tr>
+            <tr><td>Após planta de cobertura</td><td class="num">+0,10</td><td>estrutura, matéria orgânica e ciclagem</td></tr>
+            <tr><td>Hospedeiros do mofo-branco em sequência</td><td class="num">−0,10</td><td><em>Sclerotinia sclerotiorum</em> sobrevive no solo</td></tr>
+            <tr><td>Após pousio</td><td class="num">+0,05</td><td>quebra parcial do ciclo de pragas</td></tr>
+        </table>
+        </div>
+        <ul>
+            <li><strong>Nota nula</strong> (neutra no combinador) para perenes e silvicultura, onde a decisão não é de rotação, e quando o produtor não informa o histórico.</li>
+            <li><strong>O histórico é procurado no catálogo completo,</strong> mesmo quando o produtor filtra os tipos de cultura: ele pode ter plantado soja e agora só querer ver hortaliças.</li>
+            <li>A família botânica também é usada pela <strong>aderência</strong> (prancha 11): trocar de família conta como "quebra o ciclo de pragas e doenças".</li>
+        </ul>
+        <div class="aviso">Os valores são uma primeira parametrização, coerente com as recomendações gerais da Embrapa, e devem ser revisados com um agrônomo antes de uso em produção.</div>
+        <div class="arquivos" data-arquivos="towers/t5_rotacao/torre.py towers/t5_rotacao/regras.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">T5 · Rotação</div>
+        <div><b>Prancha</b>09 / 15</div><div><b>Assunto</b>Torre 5</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 10 -->
+<section class="prancha" id="p10" data-titulo="T7 · Extremos climáticos">
+    <header class="prancha-cabecalho">
+        <span class="numero">10</span>
+        <h2>T7 · Extremos climáticos<small>Qual a chance de um evento forte na fase sensível do ciclo de cada cultura?</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>A T7 nasceu como um estudo estatístico separado, nos 20 pontos do Triângulo Mineiro, e foi trazida para o recomendador por <code>avaliar_t7</code>. No recomendador, ela calcula os eventos sobre a série da POWER do próprio local (a mesma de T1 e T2), então responde em qualquer ponto do país. Geada e calor não estão aqui: ficam na T1 e na T2.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 410" role="img" aria-label="Fases sensíveis e eventos por cultura ao longo do ciclo, e o cálculo da probabilidade com ENSO">
+                <line class="linha" x1="100" y1="60" x2="900" y2="60"/>
+                <circle cx="100" cy="60" r="5" class="ponto"/><circle cx="900" cy="60" r="5" class="ponto"/>
+                <text x="100" y="44" text-anchor="middle" class="t-pequeno">plantio</text>
+                <text x="900" y="44" text-anchor="middle" class="t-pequeno">colheita</text>
+                <line class="linha" x1="300" y1="54" x2="300" y2="66"/><text x="300" y="44" text-anchor="middle" class="t-pequeno">25%</text>
+                <line class="linha" x1="500" y1="54" x2="500" y2="66"/><text x="500" y="44" text-anchor="middle" class="t-pequeno">50%</text>
+                <line class="linha" x1="700" y1="54" x2="700" y2="66"/><text x="700" y="44" text-anchor="middle" class="t-pequeno">75%</text>
+
+                <text x="20" y="110">todas</text>
+                <rect x="100" y="90" width="133" height="30" class="caixa-ciano"/>
+                <text x="108" y="109" class="t-pequeno">chuva ≥ 50 mm/dia</text>
+                <text x="245" y="109" class="t-pequeno">estabelecimento: 0 a 20 dias (INMET, nível "perigo")</text>
+
+                <text x="20" y="160">soja</text>
+                <rect x="740" y="140" width="160" height="30" class="caixa-ciano"/>
+                <text x="748" y="159" class="t-pequeno">chuva persistente</text>
+                <text x="420" y="159" class="t-pequeno">maturação e colheita: 5 dias ≥ 5 mm</text>
+
+                <text x="20" y="210">milho</text>
+                <rect x="460" y="190" width="280" height="30" class="caixa-ciano"/>
+                <text x="468" y="209" class="t-pequeno">floração e enchimento: mínima &lt; 12 °C</text>
+
+                <text x="20" y="260">demais</text>
+                <rect x="420" y="240" width="200" height="30" class="caixa"/>
+                <text x="428" y="259" class="t-pequeno">queda ≥ 5 °C em 2 d</text>
+                <rect x="767" y="240" width="133" height="30" class="caixa"/>
+                <text x="775" y="259" class="t-pequeno">&gt; 80 mm em 3 d</text>
+
+                <rect x="20" y="300" width="460" height="92" class="caixa"/>
+                <text x="36" y="322">Probabilidade por cultura e data</text>
+                <text x="36" y="342" class="t-pequeno">a mesma data repetida em cada ano desde 2001</text>
+                <text x="36" y="358" class="t-pequeno">P = fração de anos com ≥ 1 evento nas fases</text>
+                <text x="36" y="374" class="t-pequeno">IC por bootstrap de anos · p_chuva, p_frio, p_algum</text>
+                <line class="seta" x1="480" y1="346" x2="518" y2="346"/>
+                <rect x="520" y="300" width="460" height="92" class="caixa-ciano"/>
+                <text x="536" y="322">ENSO (índice RONI da NOAA)</text>
+                <text x="536" y="342" class="t-pequeno">p = (n·p_enso + k·p_clim) / (n + k), k = 10</text>
+                <text x="536" y="358" class="t-pequeno">n = anos da mesma fase de agora</text>
+                <text x="536" y="374" class="t-pequeno">score_t7 = 1 − p_algum</text>
+            </svg>
+            <figcaption>Fig. 10.1 — Fases sensíveis por cultura num ciclo genérico (acima) e o cálculo da nota (abaixo).</figcaption>
+        </figure>
+
+        <h3>Eventos e fases (<code>configs/extremos.yaml</code>)</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Cultura</th><th>Fase sensível e evento</th><th>Fonte</th></tr>
+            <tr><td>todas</td><td>estabelecimento (0–20 dias): chuva ≥ 50 mm em um dia</td><td>INMET, nível "perigo"</td></tr>
+            <tr><td>feijão</td><td>floração: mínima &lt; 12 °C; colheita: chuva persistente</td><td>Embrapa Arroz e Feijão</td></tr>
+            <tr><td>milho</td><td>floração e enchimento: mínima &lt; 12 °C</td><td>Embrapa Milho e Sorgo</td></tr>
+            <tr><td>arroz</td><td>emborrachamento e floração: mínima &lt; 17 °C; colheita: chuva persistente</td><td>Embrapa (15 a 20 °C conforme a cultivar)</td></tr>
+            <tr><td>soja</td><td>maturação e colheita: chuva persistente</td><td>Embrapa Soja</td></tr>
+            <tr><td>trigo</td><td>20 dias antes da colheita: chuva persistente</td><td>Embrapa Trigo</td></tr>
+            <tr><td>algodão</td><td>abertura dos capulhos: chuva persistente</td><td>Embrapa Algodão</td></tr>
+            <tr><td>demais</td><td>floração: queda brusca (≥ 5 °C em 2 dias); colheita: chuva extrema (&gt; 80 mm em 3 dias)</td><td>limiares gerais da T7</td></tr>
+        </table>
+        </div>
+        <ul>
+            <li><strong>Chuva persistente</strong> = 5 dias seguidos com ≥ 5 mm. Não há limiar na literatura; foi escolhido para discriminar (P entre 0,20 e 0,68 na colheita da soja em 5 estados; 3 dias ≥ 1 mm dava 0,96–1,00).</li>
+            <li><strong><code>p_algum</code> é contado direto nos anos.</strong> Multiplicar probabilidades suporia eventos independentes, e não são: uma frente fria traz chuva e queda de temperatura juntas.</li>
+            <li><strong>ENSO:</strong> cada ano recebe a fase do trimestre centrado no mês do plantio (El Niño se RONI ≥ +0,5 °C, La Niña se ≤ −0,5 °C). Com poucos anos na fase, a mistura fica perto da climatologia.</li>
+            <li><strong>Perenes e silvicultura:</strong> só o estabelecimento conta.</li>
+        </ul>
+
+        <h3>O estudo dos 20 pontos (para o time de ML)</h3>
+        <p>Fora do recomendador, <code>consulta.py</code> e os scripts <code>t7_*</code> trabalham sobre o CSV dos 20 pontos (2000–2021; 2022 em diante fica reservado ao ML). Lá estão a sensibilidade dos limiares, o teste de tendência (Mann-Kendall + Sen + Holm), o ajuste da GPD na chuva da safra out–mar (usado só nos pontos que passam no teste de estabilidade e concordam com a contagem) e as tabelas publicadas em <code>towers/t7_extremos/tabelas/</code>. O README da torre traz as fórmulas e os resultados.</p>
+        <div class="aviso">Os limiares são <strong>PROVISÓRIOS</strong>: escolhidos para a probabilidade não ficar perto de 0 nem de 1, não por dano agronômico comprovado. A grade da POWER (~50 km) suaviza picos, e há tendência forte em 2000–2021: o <code>p</code> de um período em mudança é uma média.</div>
+        <div class="arquivos" data-arquivos="towers/t7_extremos/torre.py towers/t7_extremos/README.md configs/extremos.yaml towers/t7_extremos/enso.py towers/t7_extremos/probabilidade.py towers/t7_extremos/gpd.py towers/t7_extremos/config.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">T7 · Extremos climáticos</div>
+        <div><b>Prancha</b>10 / 15</div><div><b>Assunto</b>Torre 7</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 11 -->
+<section class="prancha" id="p11" data-titulo="Combinador">
+    <header class="prancha-cabecalho">
+        <span class="numero">11</span>
+        <h2>Combinador<small>Das notas das torres à nota final de cada candidato</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p><code>combinar</code> junta as saídas das torres por <code>(id_cultura, plantio)</code> (T3 e T5 só por cultura) e calcula a nota final em seis passos. Não há modelo treinado: cada passo é uma regra que dá para explicar ao produtor.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 380" role="img" aria-label="Seis passos do combinador, da média geométrica à eliminação">
+                <rect x="20" y="40" width="280" height="120" class="caixa"/>
+                <text x="36" y="62">1 · Notas das torres</text>
+                <text x="36" y="84" class="t-pequeno">T1, T2, T3, T4, T5 e T7 em [0, 1]</text>
+                <text x="36" y="102" class="t-pequeno">piso 0,05: um zero não anula</text>
+                <text x="36" y="120" class="t-pequeno">sem nota: peso redistribuído</text>
+                <text x="36" y="138" class="t-pequeno">T6 fica fora (é filtro)</text>
+                <line class="seta" x1="300" y1="100" x2="358" y2="100"/>
+                <rect x="360" y="40" width="280" height="120" class="caixa-dupla"/>
+                <text x="376" y="62">2 · Média geométrica</text>
+                <text x="376" y="84" class="t-pequeno">exp(Σ wᵢ·ln sᵢ / Σ wᵢ)</text>
+                <text x="376" y="102" class="t-pequeno">pesos wᵢ pelo objetivo</text>
+                <text x="376" y="120" class="t-pequeno">uma torre muito ruim</text>
+                <text x="376" y="138" class="t-pequeno">derruba o total</text>
+                <line class="seta" x1="640" y1="100" x2="698" y2="100"/>
+                <rect x="700" y="40" width="280" height="120" class="caixa"/>
+                <text x="716" y="62">3 · Peso da evidência</text>
+                <text x="716" y="84" class="t-pequeno">0,7·cobertura + 0,3·qualidade</text>
+                <text x="716" y="102" class="t-pequeno">fator = 1 − 0,1·(1 − evidência)</text>
+                <text x="716" y="120" class="t-pequeno">→ de 0,9 a 1,0</text>
+                <text x="716" y="138" class="t-pequeno">desempata pelo mais verificado</text>
+                <line class="seta" x1="840" y1="160" x2="840" y2="198"/>
+
+                <rect x="700" y="200" width="280" height="120" class="caixa-ciano"/>
+                <text x="716" y="222">4 · Aderência ao produtor</text>
+                <text x="716" y="244" class="t-pequeno">benefícios pedidos que a</text>
+                <text x="716" y="262" class="t-pequeno">cultura entrega (0 a 1)</text>
+                <text x="716" y="280" class="t-pequeno">fator = 1 − 0,4·(1 − aderência)</text>
+                <text x="716" y="298" class="t-pequeno">→ de 0,6 a 1,0</text>
+                <line class="seta" x1="700" y1="260" x2="642" y2="260"/>
+                <rect x="360" y="200" width="280" height="120" class="caixa-ciano"/>
+                <text x="376" y="222">5 · Cultura desejada</text>
+                <text x="376" y="244" class="t-pequeno">nota + 0,3·(1 − nota)</text>
+                <text x="376" y="262" class="t-pequeno">nunca passa de 1</text>
+                <text x="376" y="280" class="t-pequeno">só se não foi eliminada</text>
+                <line class="seta" x1="360" y1="260" x2="302" y2="260"/>
+                <rect x="20" y="200" width="280" height="120" class="caixa-alerta"/>
+                <text x="36" y="222">6 · Eliminação</text>
+                <text x="36" y="244" class="t-pequeno">gate_t1 falso: clima inapto</text>
+                <text x="36" y="262" class="t-pequeno">só financiáveis: T6 reprovou</text>
+                <text x="36" y="280" class="t-pequeno">→ score_final = 0</text>
+                <text x="36" y="298" class="t-pequeno">e motivo_eliminacao</text>
+                <text x="20" y="360" class="t-caneta">score_agronomico = nota antes da aderência; score_final = a que ordena</text>
+            </svg>
+            <figcaption>Fig. 11.1 — Os seis passos do combinador, na ordem do código.</figcaption>
+        </figure>
+
+        <h3>Por que média geométrica</h3>
+        <p>Na média aritmética, uma cultura com clima perfeito e água péssima ainda teria nota razoável. Na geométrica, <code>Π sᵢ^wᵢ</code>, uma torre muito ruim derruba o total, como deve ser numa lavoura: o fator mais fraco limita a safra. O piso de 0,05 evita que um único zero zere tudo (0,05 elevado ao peso ainda penaliza muito). Torre sem nota (cultura sem zoneamento, rotação que não se aplica, torre que caiu) sai da conta, e o peso dela é redistribuído.</p>
+
+        <h3>Pesos por objetivo (<code>pesos.py</code>)</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Objetivo</th><th>T1 clima</th><th>T2 água</th><th>T3 solo</th><th>T4 ZARC</th><th>T5 rotação</th><th>T7 extremos</th><th>Extra</th></tr>
+            <tr><td><code>equilibrado</code></td><td class="num">0,22</td><td class="num">0,22</td><td class="num">0,18</td><td class="num">0,14</td><td class="num">0,14</td><td class="num">0,10</td><td>—</td></tr>
+            <tr><td><code>evitar_seca</code></td><td class="num">0,19</td><td class="num">0,38</td><td class="num">0,14</td><td class="num">0,14</td><td class="num">0,10</td><td class="num">0,05</td><td>—</td></tr>
+            <tr><td><code>estabilidade</code></td><td class="num">0,25</td><td class="num">0,25</td><td class="num">0,12</td><td class="num">0,10</td><td class="num">0,08</td><td class="num">0,20</td><td>T1 usa o P20; T2 usa 1 − P(perda &gt; 20%)</td></tr>
+            <tr><td><code>financiamento</code></td><td class="num">0,19</td><td class="num">0,19</td><td class="num">0,14</td><td class="num">0,33</td><td class="num">0,10</td><td class="num">0,05</td><td>só financiáveis</td></tr>
+            <tr><td><code>saude_do_solo</code></td><td class="num">0,13</td><td class="num">0,13</td><td class="num">0,27</td><td class="num">0,09</td><td class="num">0,28</td><td class="num">0,10</td><td>—</td></tr>
+        </table>
+        </div>
+        <p>O formulário permite marcar vários objetivos e problemas. <code>motor.pesos_da_entrada</code> mistura os perfis: cada objetivo aponta para um perfil ("Reter água" → <code>evitar_seca</code>, "Aumentar produtividade" → <code>estabilidade</code>, "Acesso a crédito e seguro" → <code>financiamento</code>, os demais → <code>saude_do_solo</code>), cada problema relatado entra com metade do peso, e os pesos finais são a média ponderada dos perfis. Sem nada marcado, vale o <code>equilibrado</code>.</p>
+
+        <h3>Aderência: a cultura serve ao produtor?</h3>
+        <p>As torres medem se a cultura <em>vai bem</em> no local. A aderência mede se ela <em>entrega o que o produtor pediu</em>. Objetivos e problemas viram benefícios (fixar nitrogênio, descompactar, matéria orgânica, estrutura, reter água, controlar erosão, pragas, doenças e daninhas), e cada cultura tem um "atende" de 0 a 1 para cada um, pelas recomendações da Embrapa para plantas de cobertura e adubação verde: leguminosas fixam nitrogênio, gramíneas e adubos verdes de alta biomassa formam palhada, raízes pivotantes rompem camadas compactadas, crotalárias e mucunas reduzem nematoides, e trocar de família quebra o ciclo de doenças.</p>
+        <code class="formula">aderencia = Σ peso(benefício) × atende(cultura, benefício) / Σ peso</code>
+        <div class="aviso">Pesos, piso, evidência, aderência e bônus são valores iniciais, a ajustar com o time. A fase 2 do plano troca os pesos fixos por um combinador aprendido (regressão logística ou GBM monotônico) usando os sinistros do PSR como rótulo.</div>
+        <div class="arquivos" data-arquivos="towers/combinador/combinador.py towers/combinador/pesos.py towers/combinador/preferencias.py motor.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Combinador</div>
+        <div><b>Prancha</b>11 / 15</div><div><b>Assunto</b>Nota final</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 12 -->
+<section class="prancha" id="p12" data-titulo="Ordenação e cartões">
+    <header class="prancha-cabecalho">
+        <span class="numero">12</span>
+        <h2>Ordenação e cartões<small>Melhor data por cultura, ranking, os três setores e o texto que o produtor lê</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>O combinador devolve uma linha por candidato. O ordenador reduz isso a <strong>uma linha por cultura</strong> (a melhor variante e data), ordena e corta em três setores que não se sobrepõem. O motor transforma cada linha num cartão com justificativas escritas a partir do que o produtor informou.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 290" role="img" aria-label="Ranking de vinte culturas com os setores melhores, intermediárias e piores, e o fluxo até os cartões">
+                <line class="cota" x1="40" y1="64" x2="168" y2="64"/>
+                <text x="104" y="56" text-anchor="middle" class="t-pequeno t-ciano">melhores</text>
+                <line class="cota" x1="392" y1="64" x2="520" y2="64"/>
+                <text x="456" y="56" text-anchor="middle" class="t-pequeno">intermediárias (em torno da mediana)</text>
+                <line class="cota" x1="788" y1="64" x2="916" y2="64"/>
+                <text x="852" y="56" text-anchor="middle" class="t-pequeno t-alerta">piores (com o motivo)</text>
+
+                <rect x="40" y="80" width="40" height="40" class="caixa-ciano"/><text x="60" y="104" text-anchor="middle" class="t-pequeno">1</text>
+                <rect x="84" y="80" width="40" height="40" class="caixa-ciano"/><text x="104" y="104" text-anchor="middle" class="t-pequeno">2</text>
+                <rect x="128" y="80" width="40" height="40" class="caixa-ciano"/><text x="148" y="104" text-anchor="middle" class="t-pequeno">3</text>
+                <rect x="172" y="80" width="40" height="40" class="caixa"/><text x="192" y="104" text-anchor="middle" class="t-pequeno">4</text>
+                <rect x="216" y="80" width="40" height="40" class="caixa"/><text x="236" y="104" text-anchor="middle" class="t-pequeno">5</text>
+                <rect x="260" y="80" width="40" height="40" class="caixa"/><text x="280" y="104" text-anchor="middle" class="t-pequeno">6</text>
+                <rect x="304" y="80" width="40" height="40" class="caixa"/><text x="324" y="104" text-anchor="middle" class="t-pequeno">7</text>
+                <rect x="348" y="80" width="40" height="40" class="caixa"/><text x="368" y="104" text-anchor="middle" class="t-pequeno">8</text>
+                <rect x="392" y="80" width="40" height="40" class="caixa-dupla"/><text x="412" y="104" text-anchor="middle" class="t-pequeno">9</text>
+                <rect x="436" y="80" width="40" height="40" class="caixa-dupla"/><text x="456" y="104" text-anchor="middle" class="t-pequeno">10</text>
+                <rect x="480" y="80" width="40" height="40" class="caixa-dupla"/><text x="500" y="104" text-anchor="middle" class="t-pequeno">11</text>
+                <rect x="524" y="80" width="40" height="40" class="caixa"/><text x="544" y="104" text-anchor="middle" class="t-pequeno">12</text>
+                <rect x="568" y="80" width="40" height="40" class="caixa"/><text x="588" y="104" text-anchor="middle" class="t-pequeno">13</text>
+                <rect x="612" y="80" width="40" height="40" class="caixa"/><text x="632" y="104" text-anchor="middle" class="t-pequeno">14</text>
+                <rect x="656" y="80" width="40" height="40" class="caixa"/><text x="676" y="104" text-anchor="middle" class="t-pequeno">15</text>
+                <rect x="700" y="80" width="40" height="40" class="caixa-externa"/><text x="720" y="104" text-anchor="middle" class="t-pequeno">16</text>
+                <rect x="744" y="80" width="40" height="40" class="caixa-externa"/><text x="764" y="104" text-anchor="middle" class="t-pequeno">17</text>
+                <rect x="788" y="80" width="40" height="40" class="caixa-alerta"/><text x="808" y="104" text-anchor="middle" class="t-pequeno">18</text>
+                <rect x="832" y="80" width="40" height="40" class="caixa-alerta"/><text x="852" y="104" text-anchor="middle" class="t-pequeno">19</text>
+                <rect x="876" y="80" width="40" height="40" class="caixa-alerta"/><text x="896" y="104" text-anchor="middle" class="t-pequeno">20</text>
+
+                <path class="cota" d="M40 134 H696" marker-start="url(#traco-cota)" marker-end="url(#traco-cota)"/>
+                <text x="368" y="150" text-anchor="middle" class="t-pequeno">viáveis: ordenadas pela nota</text>
+                <path class="cota" d="M700 134 H916" marker-start="url(#traco-cota)" marker-end="url(#traco-cota)"/>
+                <text x="808" y="150" text-anchor="middle" class="t-pequeno">eliminadas: nota 0</text>
+
+                <rect x="20" y="190" width="220" height="74" class="caixa"/>
+                <text x="36" y="212">melhor data</text>
+                <text x="36" y="232" class="t-pequeno">uma linha por cultura</text>
+                <text x="36" y="248" class="t-pequeno">outras datas boas (±0,05)</text>
+                <line class="seta" x1="240" y1="227" x2="268" y2="227"/>
+                <rect x="270" y="190" width="220" height="74" class="caixa"/>
+                <text x="286" y="212">ranking</text>
+                <text x="286" y="232" class="t-pequeno">nota ↓, nº de torres ↓,</text>
+                <text x="286" y="248" class="t-pequeno">escala de cultivo ↑</text>
+                <line class="seta" x1="490" y1="227" x2="518" y2="227"/>
+                <rect x="520" y="190" width="220" height="74" class="caixa"/>
+                <text x="536" y="212">setores</text>
+                <text x="536" y="232" class="t-pequeno">3 culturas cada</text>
+                <text x="536" y="248" class="t-pequeno">piores só entre curadas</text>
+                <line class="seta" x1="740" y1="227" x2="768" y2="227"/>
+                <rect x="770" y="190" width="210" height="74" class="caixa-dupla"/>
+                <text x="786" y="212">cartões (motor.py)</text>
+                <text x="786" y="232" class="t-pequeno">justificativas com as</text>
+                <text x="786" y="248" class="t-pequeno">palavras do produtor</text>
+            </svg>
+            <figcaption>Fig. 12.1 — Exemplo com 20 culturas: setores no ranking (acima) e o caminho até os cartões (abaixo).</figcaption>
+        </figure>
+
+        <h3>Regras do ordenador</h3>
+        <ul>
+            <li><strong>Melhor data:</strong> para cada cultura, fica a combinação de variante × data com maior nota (empate: mais torres com nota, depois cultura mais cultivada). <code>outras_datas_boas</code> guarda até 5 datas a 0,05 da melhor.</li>
+            <li><strong>Ranking:</strong> não eliminadas primeiro, depois nota final, número de torres com nota (confiança) e escala de cultivo.</li>
+            <li><strong>Melhores:</strong> as 3 primeiras viáveis. <strong>Piores:</strong> as 3 últimas do ranking inteiro (podem ser eliminadas, com o motivo); o motor limita esse grupo às culturas curadas (<code>universo_piores = obrigatoria</code>), para não listar espécies que o produtor nunca consideraria. <strong>Intermediárias:</strong> as 3 em torno da mediana das viáveis que sobraram.</li>
+            <li><strong>Pontos fortes e fracos:</strong> torres com nota ≥ 0,8 e ≤ 0,5, em palavras ("clima", "água", "zoneamento (ZARC)"…).</li>
+            <li><strong>Cultura desejada:</strong> sempre localizada, com posição, total de culturas e setor (ou "eliminada" / "fora dos setores").</li>
+        </ul>
+
+        <h3>Do ranking ao cartão</h3>
+        <p><code>motor_modelo</code> converte cada linha num cartão. As justificativas respondem a cada informação do produtor (cultura desejada, objetivos, problemas, histórico, data, município) e, quando a cultura não atende um pedido, dizem o que atenderia. O resumo da recomendação traz a posição da cultura desejada, a água no solo hoje e quantas culturas foram avaliadas. O painel "Acessar estatísticas" (<code>estatisticas.py</code>) mostra clima mensal, água no solo, solo do local, calendário do ZARC e as notas de cada critério, lendo os mesmos caches, sem recalcular as torres.</p>
+        <div class="arquivos" data-arquivos="towers/combinador/ordenador.py motor.py app_teste.py estatisticas.py painel_estatisticas.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Ordenação e cartões</div>
+        <div><b>Prancha</b>12 / 15</div><div><b>Assunto</b>Saída</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 13 -->
+<section class="prancha" id="p13" data-titulo="Validação e calibração">
+    <header class="prancha-cabecalho">
+        <span class="numero">13</span>
+        <h2>Validação e calibração<small>Contra o que cada torre foi comparada, e com que resultado</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>Sem rótulo de "recomendação certa", cada torre foi comparada com a melhor referência independente disponível: o <strong>ZARC</strong> para clima e água (o zoneamento oficial não indica plantios que a geada ou a seca costumam perder) e a <strong>PAM/IBGE</strong> para o solo (o que um município planta de fato, o solo de lá comprovadamente suporta).</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 350" role="img" aria-label="Acurácia balanceada de T1, T2 e das duas juntas contra o ZARC, e eliminação indevida da T3 contra a PAM">
+                <text x="200" y="22" class="t-pequeno">acurácia balanceada contra o ZARC · 42 municípios, 7 UFs, 6 culturas</text>
+                <line class="linha" x1="200" y1="40" x2="200" y2="200"/>
+                <line class="linha" x1="200" y1="200" x2="900" y2="200"/>
+                <line x1="550" y1="40" x2="550" y2="200" stroke="#ff9e8a" stroke-width="1.2" stroke-dasharray="4 3"/>
+                <text x="556" y="48" class="t-pequeno t-alerta">acaso</text>
+                <text x="200" y="216" text-anchor="middle" class="t-pequeno">0</text>
+                <text x="375" y="216" text-anchor="middle" class="t-pequeno">0,25</text>
+                <text x="550" y="216" text-anchor="middle" class="t-pequeno">0,5</text>
+                <text x="725" y="216" text-anchor="middle" class="t-pequeno">0,75</text>
+                <text x="900" y="216" text-anchor="middle" class="t-pequeno">1</text>
+                <text x="190" y="76" text-anchor="end">T1 (clima)</text>
+                <rect x="200" y="60" width="452" height="22" class="caixa-ciano"/>
+                <text x="660" y="76" class="t-pequeno">0,645</text>
+                <text x="190" y="126" text-anchor="end">T2 (água)</text>
+                <rect x="200" y="110" width="424" height="22" class="caixa-ciano"/>
+                <line class="linha-caneta" x1="612" y1="106" x2="612" y2="136"/>
+                <text x="632" y="126" class="t-pequeno">0,605 (sem teto de raiz: 0,589)</text>
+                <text x="190" y="176" text-anchor="end">T1 e T2</text>
+                <rect x="200" y="160" width="496" height="22" class="caixa-dupla"/>
+                <line class="linha-caneta" x1="691" y1="156" x2="691" y2="186"/>
+                <text x="704" y="176" class="t-pequeno">0,708 (sem teto: 0,701)</text>
+
+                <text x="200" y="252" class="t-pequeno">T3 contra a PAM/IBGE · 53 municípios, 236 pares cultivados · eliminação indevida</text>
+                <text x="190" y="281" text-anchor="end">com regras BR</text>
+                <rect x="200" y="268" width="34" height="18" class="caixa-ciano"/>
+                <text x="242" y="282" class="t-pequeno">1,7%</text>
+                <text x="190" y="316" text-anchor="end">sem regras BR</text>
+                <rect x="200" y="303" width="254" height="18" class="caixa-alerta"/>
+                <text x="462" y="317" class="t-pequeno">12,7%</text>
+                <text x="620" y="300" class="t-caneta">aqui, menor é melhor</text>
+            </svg>
+            <figcaption>Fig. 13.1 — Concordância com o ZARC (acima; traço amarelo = sem o teto de raiz) e o benchmark do solo (abaixo).</figcaption>
+        </figure>
+
+        <h3>Como cada número foi obtido</h3>
+        <ul>
+            <li><strong>T1:</strong> <code>calibracao.py</code> sorteia 6 municípios por UF (RS, SC, PR, SP, MS, MG, GO) entre os que têm ZARC para trigo, aveia, cevada, milho, soja e feijão. Para cada município, cultura e decêndio, compara o <code>gate_t1</code> com "o ZARC indica em alguma combinação de solo e ciclo". A grade de margens de geada (0 a 3 °C) e de duração da fase inicial (15, 30, 45 dias) escolheu <strong>+1 °C e 15 dias</strong>.</li>
+            <li><strong>T2:</strong> <code>validacao.py</code> usa o critério do próprio ZARC: indicado se P(ISNA &lt; 0,5) ≤ 40%, com estado inicial climatológico e a linha do ZARC da classe AD que a T2 estimou. O teto de raiz de 0,4 m melhorou as duas comparações.</li>
+            <li><strong>T3:</strong> <code>validacao.py</code> busca a área plantada no SIDRA (tabela 5457). "Eliminação indevida" = cultura plantada no município com nota ≤ 0,2. Também mede o AUC, que deve ser modesto: clima e mercado também explicam o que se planta.</li>
+            <li><strong>Grade do SoilGrids:</strong> frente à API, 1,8 p.p. de erro médio na textura, 0,09 no pH e a mesma classe WRB em 89% dos pontos.</li>
+        </ul>
+        <div class="dica">A concordância absoluta não chega a 100% nem deveria: o ZARC reprova por razões que cada torre isolada não vê (a T1 não olha água; a T2 não olha geada), e o ZARC é climatológico, enquanto a T2 parte da umidade de hoje. O que importa é comparar configurações entre si.</div>
+
+        <h3>Testes automatizados</h3>
+        <p><code>pytest</code> coleta 339 testes em <code>tests/</code>: um arquivo por torre, por cliente de dados (POWER, ZARC, ECOCROP, SoilGrids, Neon, taxonomia), pelo combinador, pelas preferências, pelo recomendador e pelo motor. Os testes não usam rede nem o banco (<code>RECOMENDADOR_NEON=0</code>).</p>
+        <div class="arquivos" data-arquivos="towers/t1_aptidao/calibracao.py towers/t2_hidrica/validacao.py towers/t3_solo/validacao.py scripts/t7_validacao.py tests/conftest.py pytest.ini"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Validação e calibração</div>
+        <div><b>Prancha</b>13 / 15</div><div><b>Assunto</b>Qualidade</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 14 -->
+<section class="prancha" id="p14" data-titulo="Resiliência e configuração">
+    <header class="prancha-cabecalho">
+        <span class="numero">14</span>
+        <h2>Resiliência e configuração<small>O que acontece quando uma fonte cai, e as chaves para rodar</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <p>Uma recomendação depende de três serviços externos e de um banco. A regra do código é que <strong>nenhuma falha derruba a recomendação</strong>: cada fonte tem um caminho de reserva, e o que não tem reserva sai da nota de forma visível no log.</p>
+
+        <figure class="desenho">
+            <svg class="d" viewBox="0 0 1000 320" role="img" aria-label="Cadeias de reserva para solo, clima e torres">
+                <text x="170" y="34" text-anchor="middle" class="t-titulo">Solo</text>
+                <text x="500" y="34" text-anchor="middle" class="t-titulo">Clima</text>
+                <text x="830" y="34" text-anchor="middle" class="t-titulo">Torres</text>
+
+                <rect x="20" y="50" width="300" height="60" class="caixa"/>
+                <text x="36" y="74">grade do Brasil (0,01°)</text>
+                <text x="36" y="94" class="t-pequeno">arquivo local ou tabela no Neon</text>
+                <line class="seta" x1="170" y1="110" x2="170" y2="148"/>
+                <text x="178" y="134" class="t-pequeno">fora da grade</text>
+                <rect x="20" y="150" width="300" height="60" class="caixa"/>
+                <text x="36" y="174">API do SoilGrids</text>
+                <text x="36" y="194" class="t-pequeno">vizinhos até ~10 km · até 20 s</text>
+                <line class="seta" x1="170" y1="210" x2="170" y2="248"/>
+                <text x="178" y="234" class="t-pequeno">falhou</text>
+                <rect x="20" y="250" width="300" height="60" class="caixa-alerta"/>
+                <text x="36" y="274">AD 4 (1,10 mm/cm)</text>
+                <text x="36" y="294" class="t-pequeno">T4 e T6: melhor solo do ZARC</text>
+
+                <rect x="350" y="50" width="300" height="60" class="caixa"/>
+                <text x="366" y="74">cache da célula</text>
+                <text x="366" y="94" class="t-pequeno">data/cache/power ou Neon</text>
+                <line class="seta" x1="500" y1="110" x2="500" y2="148"/>
+                <text x="508" y="134" class="t-pequeno">faltam dias</text>
+                <rect x="350" y="150" width="300" height="60" class="caixa"/>
+                <text x="366" y="174">API da NASA POWER</text>
+                <text x="366" y="194" class="t-pequeno">só o trecho que falta (+120 dias)</text>
+                <line class="seta" x1="500" y1="210" x2="500" y2="248"/>
+                <text x="508" y="234" class="t-pequeno">falhou</text>
+                <rect x="350" y="250" width="300" height="60" class="caixa-alerta"/>
+                <text x="366" y="274">sem clima</text>
+                <text x="366" y="294" class="t-pequeno">T1 neutra; T2 e T7 fora da nota</text>
+
+                <rect x="680" y="50" width="300" height="60" class="caixa"/>
+                <text x="696" y="74">responde em 30 s</text>
+                <text x="696" y="94" class="t-pequeno">entra na nota</text>
+                <line class="seta" x1="830" y1="110" x2="830" y2="148"/>
+                <text x="838" y="134" class="t-pequeno">erro ou atraso</text>
+                <rect x="680" y="150" width="300" height="60" class="caixa"/>
+                <text x="696" y="174">torres_ausentes</text>
+                <text x="696" y="194" class="t-pequeno">motivo no log, não no cartão</text>
+                <line class="seta" x1="830" y1="210" x2="830" y2="248"/>
+                <rect x="680" y="250" width="300" height="60" class="caixa-alerta"/>
+                <text x="696" y="274">peso redistribuído</text>
+                <text x="696" y="294" class="t-pequeno">entre as torres que responderam</text>
+            </svg>
+            <figcaption>Fig. 14.1 — Cadeias de reserva. Em vermelho tracejado, o último recurso de cada uma.</figcaption>
+        </figure>
+
+        <ul>
+            <li><strong>Neon:</strong> falha de rede no banco vira log, e o código segue pelo caminho antigo (arquivo local ou API de origem). A URL do banco nunca vai para o log.</li>
+            <li><strong>Torre atrasada:</strong> o executor é encerrado sem esperar (<code>shutdown(wait=False, cancel_futures=True)</code>); a torre lenta termina em segundo plano e é ignorada.</li>
+            <li><strong>Interface sem dados:</strong> se o catálogo ou os municípios não carregam (clone novo, sem <code>preparar_dados.py</code>), o app cai no <code>motor_mock</code> e continua funcionando para demonstração.</li>
+        </ul>
+
+        <h3>Variáveis e segredos</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Chave</th><th>Onde</th><th>Para quê</th></tr>
+            <tr><td><code>MOTOR_RECOMENDACAO</code></td><td>ambiente</td><td><code>modelo</code> (padrão quando há dados) ou <code>mock</code>.</td></tr>
+            <tr><td><code>NEON_URL</code></td><td>ambiente</td><td>URL do NeonDB. Alternativas, nessa ordem: <code>st.secrets["neon"]["url"]</code> e <code>.streamlit/secrets.toml</code>.</td></tr>
+            <tr><td><code>RECOMENDADOR_NEON=0</code></td><td>ambiente</td><td>Desliga o banco (os testes desligam).</td></tr>
+            <tr><td><code>[neon] url_direta</code></td><td><code>.streamlit/secrets.toml</code></td><td>Conexão direta, sem pooler, usada só pela carga (<code>carregar_neon.py</code>).</td></tr>
+        </table>
+        </div>
+
+        <h3>Comandos</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Comando</th><th>O que faz</th></tr>
+            <tr><td><code>pip install -r requirements.txt</code></td><td>Polars, NumPy, Streamlit, psycopg, SciPy, statsmodels, OmegaConf…</td></tr>
+            <tr><td><code>python scripts/preparar_dados.py</code></td><td>Dados estáticos (prancha 03).</td></tr>
+            <tr><td><code>streamlit run app_teste.py</code></td><td>Sobe a interface com o modelo real.</td></tr>
+            <tr><td><code>python -m pytest</code></td><td>Roda os testes, sem rede.</td></tr>
+            <tr><td><code>python -m scripts.t7_tabela_referencia --publicar</code></td><td>Refaz as tabelas da T7 para o ML (depois de <code>scripts.t7_gpd</code>).</td></tr>
+        </table>
+        </div>
+        <p>Uso direto do modelo, sem a interface:</p>
+        <code class="formula">from datetime import date
+from towers.combinador import recomendar
+
+rec = recomendar(lat=-23.3, lon=-51.2, data_plantio=date(2026, 11, 20),
+                 cultura_desejada="Soja", ultimo="Soja", penultimo="Milho",
+                 objetivo="equilibrado")
+rec.setores["melhores"], rec.desejada, rec.torres_ausentes</code>
+        <div class="arquivos" data-arquivos="towers/data/neon.py towers/combinador/recomendador.py motor.py requirements.txt .streamlit/config.toml"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Resiliência e configuração</div>
+        <div><b>Prancha</b>14 / 15</div><div><b>Assunto</b>Operação</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+<!-- ===================================================================== 15 -->
+<section class="prancha" id="p15" data-titulo="Pontos de atenção">
+    <header class="prancha-cabecalho">
+        <span class="numero">15</span>
+        <h2>Pontos de atenção<small>Limitações conhecidas, o que falta do plano e um glossário</small></h2>
+        <div class="acoes"></div>
+    </header>
+    <div class="conteudo">
+        <h3>Limitações conhecidas</h3>
+        <ul>
+            <li><strong>Pesos sem rótulo:</strong> os pesos do combinador, da evidência, da aderência e o bônus da cultura desejada são valores iniciais. Só o combinador aprendido (sinistros do PSR, split temporal por ano) vai dizer se estão bons.</li>
+            <li><strong>Regras agronômicas a revisar:</strong> rotação (T5), "atende" da aderência e limiares da T7 são primeiras parametrizações, todas marcadas para revisão com agrônomo.</li>
+            <li><strong>Resolução do clima:</strong> a célula da POWER tem ~50 km; municípios vizinhos recebem o mesmo clima, e extremos locais são suavizados.</li>
+            <li><strong>Umidade de hoje aproximada:</strong> o <code>GWETROOT</code> é fração da saturação de uma reanálise, normalizada pelo histórico. O plano prevê o SMAP L4 na v1.</li>
+            <li><strong>Parâmetros genéricos:</strong> FAO-56 e ECOCROP dão valores por espécie ou grupo, não por cultivar. O peso da evidência penaliza levemente (até 10%) quem usa valor de grupo.</li>
+            <li><strong>Cereais de inverno:</strong> a T1 concorda menos com o ZARC no trigo; o erro não vem da geada (a geada na floração foi testada e piorou).</li>
+            <li><strong>Crédito:</strong> as regras mudam a cada Plano Safra; <code>VIGENCIA</code> precisa ser reconferida. O formulário ainda não pergunta CAR, embargo nem terra indígena, então a T6 só avisa.</li>
+            <li><strong>Fotoperíodo:</strong> só alerta; não muda a nota.</li>
+        </ul>
+
+        <h3>O que o plano previa e ainda não existe</h3>
+        <ul>
+            <li>Combinador aprendido com os sinistros do PSR/SISSER (fase 4 do plano).</li>
+            <li>Selo de cultivar registrada no RNC (depende de exportação em lote do MAPA).</li>
+            <li>Verificação socioambiental pelo código do CAR (SICAR, IBAMA, FUNAI, ICMBio).</li>
+            <li>Níveis de confiança A/B/C como selo: hoje a confiança entra como fator na nota (peso da evidência).</li>
+        </ul>
+
+        <h3>Glossário</h3>
+        <div class="rolagem">
+        <table class="tabela-tecnica">
+            <tr><th>Termo</th><th>Significado aqui</th></tr>
+            <tr><td>Torre</td><td>Módulo independente que dá uma nota (ou probabilidade) a cada candidato, com as métricas que a explicam.</td></tr>
+            <tr><td>Candidato</td><td>Uma combinação cultura × data de plantio (× ciclo, dentro das torres).</td></tr>
+            <tr><td>ECOCROP</td><td>Base da FAO com os requisitos ecológicos de ~2.500 espécies: faixas de temperatura, chuva, pH, solo, ciclo e fotoperíodo.</td></tr>
+            <tr><td>Trapézio</td><td>Função que vale 1 na faixa ótima, 0 fora da faixa absoluta e é linear entre elas.</td></tr>
+            <tr><td>KTMP / KTMPR</td><td>Temperatura letal na fase inicial / na planta estabelecida (ECOCROP).</td></tr>
+            <tr><td>ZARC</td><td>Zoneamento Agrícola de Risco Climático (MAPA): risco por município, cultura, solo, ciclo e decêndio. Condição para crédito de custeio, Proagro e PSR.</td></tr>
+            <tr><td>Decêndio</td><td>Período de 10 dias; o ano tem 36 (dec1 = 1 a 10 de janeiro).</td></tr>
+            <tr><td>Classe AD</td><td>Água disponível do solo, AD 1 a 6 (códigos 11–16), pela PTF do ZARC/Embrapa.</td></tr>
+            <tr><td>TAW / RAW</td><td>Água total disponível na zona de raízes / parte dela que a planta usa sem estresse (p × TAW).</td></tr>
+            <tr><td>Kc / Ky</td><td>Coeficiente de cultura (ETc = Kc × ET0) / resposta do rendimento ao déficit hídrico.</td></tr>
+            <tr><td>ET0</td><td>Evapotranspiração de referência (Penman-Monteith ou Hargreaves).</td></tr>
+            <tr><td>ISNA</td><td>Índice de satisfação da necessidade de água (ETa/ETc), na fase crítica: o critério hídrico do ZARC.</td></tr>
+            <tr><td>GWETROOT · IMERG · MERRA-2</td><td>Umidade da zona de raízes (POWER) · chuva por satélite (GPM) · reanálise que gera as demais variáveis.</td></tr>
+            <tr><td>P20</td><td>Valor que é superado em 80% dos anos: o "ano ruim típico".</td></tr>
+            <tr><td>Meia-vida</td><td>Idade (10 anos) em que um ano histórico passa a pesar metade de um ano recente.</td></tr>
+            <tr><td>Gate</td><td>Teste eliminatório: falhou, a nota final é 0.</td></tr>
+            <tr><td>Aderência</td><td>Quanto a cultura entrega os benefícios que o produtor pediu.</td></tr>
+            <tr><td>RONI / ENSO</td><td>Índice relativo do Niño oceânico (NOAA) / El Niño–Oscilação Sul.</td></tr>
+            <tr><td>WRB · CTC</td><td>Classificação internacional de solos · capacidade de troca de cátions (fertilidade).</td></tr>
+            <tr><td>PAM · PSR · CAR</td><td>Produção Agrícola Municipal (IBGE) · Subvenção ao Prêmio do Seguro Rural · Cadastro Ambiental Rural.</td></tr>
+        </table>
+        </div>
+        <div class="arquivos" data-arquivos="docs/PLANO_RECOMENDADOR.md towers/combinador/pesos.py towers/t6_elegibilidade/regras.py"></div>
+    </div>
+    <div class="carimbo">
+        <div class="titulo-carimbo">Pontos de atenção</div>
+        <div><b>Prancha</b>15 / 15</div><div><b>Assunto</b>Pendências</div><div><b>Escala</b>Sem escala</div><div><b>Revisão</b>Nov/2026</div>
+    </div>
+</section>
+
+</main>
+
+<!-- Balão sobre a seleção de texto -->
+<div class="balao-selecao" id="balao-selecao">
+    <button class="botao pequeno caneta" id="anotar-selecao">✎ Anotar</button>
+</div>
+
+<!-- Caderno com todas as notas -->
+<dialog class="caderno" id="caderno">
+    <div class="caderno-cabecalho">
+        <h2>Caderno de notas</h2>
+        <button class="botao pequeno caneta" id="exportar-notas-caderno">Exportar (.md)</button>
+        <button class="botao pequeno" id="fechar-caderno" aria-label="Fechar">✕</button>
+    </div>
+    <div class="caderno-corpo" id="caderno-corpo"></div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
