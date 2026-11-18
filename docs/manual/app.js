@@ -9,7 +9,7 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 // Aberto do disco (file://) ou de um servidor local, os arquivos citados abrem direto da pasta do repositório;
 // publicado em outro lugar, viram links para o GitHub.
 const LOCAL = location.protocol === 'file:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
-const REPOSITORIO = 'https://github.com/DataLabUFU/Hackthon-NASA-2026/blob/feat/recomendador-v-0/';
+const REPOSITORIO = 'https://github.com/DataLabUFU/Hackthon-NASA-2026/blob/main/';
 const CHAVE_NOTAS = 'rotasafra-manual:notas';
 
 const pranchas = $$('.prancha');
