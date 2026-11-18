@@ -4,6 +4,10 @@
 
 Uma plataforma inteligente de apoio à decisão agrícola que integra observações da Terra da NASA, dados climáticos, informações de solo e histórico de cultivo para recomendar estratégias de plantio mais produtivas, sustentáveis e resilientes às mudanças climáticas.
 
+### 📐 [Manual técnico do recomendador](https://datalabufu.github.io/Hackthon-NASA-2026/)
+
+Documentação do modelo em pranchas: como cada uma das sete torres pontua as culturas, como o combinador chega à nota final, de onde vêm os dados e como cada torre foi validada. O código-fonte do manual fica em [`docs/manual/`](docs/manual/).
+
 ### 👥 Equipe
 
 Projeto desenvolvido pelos integrantes da Liga Acadêmica DataLab:
